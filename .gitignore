@@ -1,0 +1,5 @@
+cmake/*
+CMakeLists.txt
+Nucleo.ioc
+STM32H743ZITx_FLASH.ld
+arm.none.eabi-gcc.cmake
