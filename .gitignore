@@ -1,6 +1,0 @@
-cmake/*
-CMakeLists.txt
-arm-none-eabi-gcc.cmake
-*.ld
-*.bin
-*.hex
