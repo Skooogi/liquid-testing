@@ -75,6 +75,10 @@ void Error_Handler(void);
 #define LD2_GPIO_Port GPIOE
 /* USER CODE BEGIN Private defines */
 
+/* GPIO macros to reduce writing and potential for mistakes */
+#define GPIOW(pin, v) HAL_GPIO_WritePin(pin ## _GPIO_Port, pin ## _Pin, v)
+#define GPIOR(pin) HAL_GPIO_ReadPin(pin ## _GPIO_Port, pin ## _Pin)
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

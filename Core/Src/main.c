@@ -18,11 +18,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "string.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "events.h"
+#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,7 +69,7 @@ UART_HandleTypeDef huart3;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-
+volatile struct eventflags eventflags;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -129,7 +129,23 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
+
+		/* If no flags were set by interrupts, go back to sleep */
+		if (!eventflags.dont_sleep)
+			continue;
+		eventflags.dont_sleep = 0;
+
+		/* Go through all flags to check which of them are up. Flags could indicate for example the need
+		 * for data processing or */
+		if (eventflags.tick) {
+			eventflags.tick = 0;
+			// TODO: Do something, say, toggle an LED at suitable intervals. Shows the system is alive.
+			// For instance:
+			// GPIOW(LED1, 1 & (a >> 8)); (Just define LED1 as a pin with an LED connected to it)
+		}
+
+	  }
+
   /* USER CODE END 3 */
 }
 
