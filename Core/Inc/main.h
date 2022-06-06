@@ -49,6 +49,8 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -57,24 +59,18 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define B1_Pin GPIO_PIN_13
-#define B1_GPIO_Port GPIOC
-#define LD1_Pin GPIO_PIN_0
-#define LD1_GPIO_Port GPIOB
-#define LD3_Pin GPIO_PIN_14
-#define LD3_GPIO_Port GPIOB
-#define STLINK_RX_Pin GPIO_PIN_8
-#define STLINK_RX_GPIO_Port GPIOD
-#define STLINK_TX_Pin GPIO_PIN_9
-#define STLINK_TX_GPIO_Port GPIOD
-#define USB_OTG_FS_PWR_EN_Pin GPIO_PIN_10
-#define USB_OTG_FS_PWR_EN_GPIO_Port GPIOD
-#define USB_OTG_FS_OVCR_Pin GPIO_PIN_7
-#define USB_OTG_FS_OVCR_GPIO_Port GPIOG
-#define LED_TOP_Pin GPIO_PIN_5
-#define LED_TOP_GPIO_Port GPIOB
-#define LD2_Pin GPIO_PIN_1
-#define LD2_GPIO_Port GPIOE
+#define EN_3V0_Pin GPIO_PIN_4
+#define EN_3V0_GPIO_Port GPIOA
+#define DEMOD_RESET_Pin GPIO_PIN_5
+#define DEMOD_RESET_GPIO_Port GPIOA
+#define DEMOD_CS_Pin GPIO_PIN_0
+#define DEMOD_CS_GPIO_Port GPIOB
+#define DEMOD_RXEN_Pin GPIO_PIN_1
+#define DEMOD_RXEN_GPIO_Port GPIOB
+#define DEMOD_TXEN_Pin GPIO_PIN_2
+#define DEMOD_TXEN_GPIO_Port GPIOB
+#define CANLED_Pin GPIO_PIN_5
+#define CANLED_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* GPIO macros to reduce writing and potential for mistakes */
