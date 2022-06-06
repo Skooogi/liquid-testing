@@ -6,7 +6,7 @@
 #ifndef INC_BUFFER_H_
 #define INC_BUFFER_H_
 
-#define RESULT_BUFFER_SIZE 0x1000		/* == 4096. Requirement to store 100 latest AIS messages. An AIS message of interest
+#define RESULT_BUFFER_SIZE 0x1000	/* == 4096. Requirement to store 100 latest AIS messages. An AIS message of interest
 									 * is 23 bytes (TODO: TBC) long, and thus 100 messages requires 100 * 23 == 2300 bytes.
 									 * NOTE: Length must be a power of two for performance reasons. Probably a longer buffer
 									 * could be an option as well if more capacity offers some advantage. */
@@ -15,7 +15,7 @@
 
 struct result_buffer {
 
-	uint8_t data[RESULT_BUFFER_SIZE];		// Buffer for decoded AIS messages that wait to be sent onward to the OBC.
+	uint8_t data[RESULT_BUFFER_SIZE];	// Buffer for decoded AIS messages that wait to be sent onward to the OBC.
 	uint32_t head;						// Result buffer head index.
 	uint32_t tail;						// Result buffer tail index.
 	uint16_t length;					// Amount of new data in the result buffer (in bytes).
