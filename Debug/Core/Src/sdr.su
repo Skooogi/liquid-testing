@@ -1,2 +1,2 @@
-../Core/Src/sdr.c:17:13:sdr_init	4	static
-../Core/Src/sdr.c:24:6:sdr_change_mode	16	static
+sdr.c:17:13:sdr_init	4	static
+sdr.c:24:6:sdr_change_mode	16	static

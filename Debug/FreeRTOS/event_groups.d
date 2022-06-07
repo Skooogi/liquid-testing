@@ -1,27 +1,40 @@
 FreeRTOS/event_groups.o: ../FreeRTOS/event_groups.c \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/FreeRTOS.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/Core/Inc/FreeRTOSConfig.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/projdefs.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/portable.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/deprecated_definitions.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/portable/GCC/ARM_CM4F/portmacro.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/mpu_wrappers.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/task.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/list.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/timers.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/task.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/event_groups.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/timers.h
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/FreeRTOS.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/Core/Inc/FreeRTOSConfig.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/projdefs.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/portable.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/deprecated_definitions.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/portable/GCC/ARM_CM4F/portmacro.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/mpu_wrappers.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/task.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/list.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/timers.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/task.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/event_groups.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/timers.h:
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/FreeRTOS.h \
+ C:/Users/topir/DEV/Kvarkensat/Core/Inc/FreeRTOSConfig.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/projdefs.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/portable.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/deprecated_definitions.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/portable/GCC/ARM_CM4F/portmacro.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/mpu_wrappers.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/task.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/list.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/timers.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/task.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/event_groups.h \
+ C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/timers.h
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/FreeRTOS.h:
+
+C:/Users/topir/DEV/Kvarkensat/Core/Inc/FreeRTOSConfig.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/projdefs.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/portable.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/deprecated_definitions.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/portable/GCC/ARM_CM4F/portmacro.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/mpu_wrappers.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/task.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/list.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/timers.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/task.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/event_groups.h:
+
+C:/Users/topir/DEV/Kvarkensat/FreeRTOS/include/timers.h:
