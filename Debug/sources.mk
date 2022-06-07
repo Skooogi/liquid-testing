@@ -21,21 +21,14 @@ C_DEPS :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
-Application/User/Core \
-Application/User/Startup \
-Application/User/USB_DEVICE/App \
-Application/User/USB_DEVICE/Target \
 Core/Src \
 Core/Startup \
-Drivers/CMSIS \
 Drivers/STM32H7xx_HAL_Driver/Src \
-Drivers/STM32H7xx_HAL_Driver \
 FreeRTOS \
 FreeRTOS/portable/GCC/ARM_CM4F \
 FreeRTOS/portable/MemMang \
 Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src \
 Middlewares/ST/STM32_USB_Device_Library/Core/Src \
-Middlewares/USB_Device_Library \
 USB_DEVICE/App \
 USB_DEVICE/Target \
 

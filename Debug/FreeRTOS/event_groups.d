@@ -1,6 +1,6 @@
 FreeRTOS/event_groups.o: ../FreeRTOS/event_groups.c \
  /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/FreeRTOS.h \
- /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/FreeRTOSConfig.h \
+ /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/Core/Inc/FreeRTOSConfig.h \
  /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/projdefs.h \
  /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/portable.h \
  /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/deprecated_definitions.h \
@@ -13,7 +13,7 @@ FreeRTOS/event_groups.o: ../FreeRTOS/event_groups.c \
  /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/event_groups.h \
  /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/timers.h
 /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/FreeRTOS.h:
-/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/FreeRTOSConfig.h:
+/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/Core/Inc/FreeRTOSConfig.h:
 /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/projdefs.h:
 /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/portable.h:
 /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/FreeRTOS/include/deprecated_definitions.h:
