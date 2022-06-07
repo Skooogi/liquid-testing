@@ -1,2 +1,3 @@
-Core/Src/adc.o: ../Core/Src/adc.c ../Core/Inc/adc.h
-../Core/Inc/adc.h:
+Core/Src/adc.o: ../Core/Src/adc.c \
+ /home/lndn/Documents/Work/KvarkenSat/Kvarkensat/Core/Inc/adc.h
+/home/lndn/Documents/Work/KvarkenSat/Kvarkensat/Core/Inc/adc.h:
