@@ -5,6 +5,9 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../Core/Src/SEGGER_RTT.c \
+../Core/Src/SEGGER_RTT_Syscalls_GCC.c \
+../Core/Src/SEGGER_RTT_printf.c \
 ../Core/Src/adc.c \
 ../Core/Src/buffer.c \
 ../Core/Src/bus.c \
@@ -23,6 +26,9 @@ C_SRCS += \
 ../Core/Src/telecommands.c 
 
 OBJS += \
+./Core/Src/SEGGER_RTT.o \
+./Core/Src/SEGGER_RTT_Syscalls_GCC.o \
+./Core/Src/SEGGER_RTT_printf.o \
 ./Core/Src/adc.o \
 ./Core/Src/buffer.o \
 ./Core/Src/bus.o \
@@ -41,6 +47,9 @@ OBJS += \
 ./Core/Src/telecommands.o 
 
 C_DEPS += \
+./Core/Src/SEGGER_RTT.d \
+./Core/Src/SEGGER_RTT_Syscalls_GCC.d \
+./Core/Src/SEGGER_RTT_printf.d \
 ./Core/Src/adc.d \
 ./Core/Src/buffer.d \
 ./Core/Src/bus.d \
@@ -66,7 +75,7 @@ Core/Src/%.o: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/adc.d ./Core/Src/adc.o ./Core/Src/buffer.d ./Core/Src/buffer.o ./Core/Src/bus.d ./Core/Src/bus.o ./Core/Src/dac.d ./Core/Src/dac.o ./Core/Src/decoder.d ./Core/Src/decoder.o ./Core/Src/error.d ./Core/Src/error.o ./Core/Src/filter.d ./Core/Src/filter.o ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/receiver.d ./Core/Src/receiver.o ./Core/Src/sdr.d ./Core/Src/sdr.o ./Core/Src/stm32h7xx_hal_msp.d ./Core/Src/stm32h7xx_hal_msp.o ./Core/Src/stm32h7xx_it.d ./Core/Src/stm32h7xx_it.o ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/system_stm32h7xx.d ./Core/Src/system_stm32h7xx.o ./Core/Src/telecommands.d ./Core/Src/telecommands.o
+	-$(RM) ./Core/Src/SEGGER_RTT.d ./Core/Src/SEGGER_RTT.o ./Core/Src/SEGGER_RTT_Syscalls_GCC.d ./Core/Src/SEGGER_RTT_Syscalls_GCC.o ./Core/Src/SEGGER_RTT_printf.d ./Core/Src/SEGGER_RTT_printf.o ./Core/Src/adc.d ./Core/Src/adc.o ./Core/Src/buffer.d ./Core/Src/buffer.o ./Core/Src/bus.d ./Core/Src/bus.o ./Core/Src/dac.d ./Core/Src/dac.o ./Core/Src/decoder.d ./Core/Src/decoder.o ./Core/Src/error.d ./Core/Src/error.o ./Core/Src/filter.d ./Core/Src/filter.o ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/receiver.d ./Core/Src/receiver.o ./Core/Src/sdr.d ./Core/Src/sdr.o ./Core/Src/stm32h7xx_hal_msp.d ./Core/Src/stm32h7xx_hal_msp.o ./Core/Src/stm32h7xx_it.d ./Core/Src/stm32h7xx_it.o ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/system_stm32h7xx.d ./Core/Src/system_stm32h7xx.o ./Core/Src/telecommands.d ./Core/Src/telecommands.o
 
 .PHONY: clean-Core-2f-Src
 

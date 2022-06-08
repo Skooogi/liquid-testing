@@ -1,6 +1,6 @@
-receiver.c:32:6:write_register	16	static
-receiver.c:43:6:write_register_2	16	static
-receiver.c:56:9:read_register	64	static
-receiver.c:69:6:demod_set_vco	32	static
-receiver.c:98:9:demod_is_locked	8	static
-receiver.c:102:6:configureRadio	16	static
+receiver.c:31:6:write_register	16	static
+receiver.c:42:6:write_register_2	16	static
+receiver.c:55:9:read_register	64	static
+receiver.c:68:6:demod_set_vco	32	static
+receiver.c:97:9:demod_is_locked	8	static
+receiver.c:101:6:configureRadio	56	static

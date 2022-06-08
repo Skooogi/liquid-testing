@@ -13,8 +13,7 @@
 #include "main.h"
 
 
-// Variable used in calculating VCO frequency
-//frequency_t demod_pll_step = 50000;
+// Buffer to hold SPI response from CMX994 receiver
 char spi_buf[20];
 // LO frequency (Set to 2x center frequency and use 2 as divider for PLL as a registry setting)
 uint32_t LO_FREQ = 324e6;
@@ -31,10 +30,10 @@ uint32_t RVAL = 5000;
  */
 void write_register(uint8_t reg, uint8_t val) {
 
-	HAL_GPIO_WritePin (DEMOD_CS_GPIO_Port, DEMOD_CS_Pin, GPIO_PIN_RESET);
+	GPIOW(DEMOD_CS, GPIO_PIN_RESET);
 	HAL_SPI_Transmit(&hspi2, (uint8_t *)&reg, 1, 100);
 	HAL_SPI_Transmit(&hspi2, (uint8_t *)&val, 1, 100);
-	HAL_GPIO_WritePin (DEMOD_CS_GPIO_Port, DEMOD_CS_Pin, GPIO_PIN_SET);
+	GPIOW(DEMOD_CS, GPIO_PIN_SET);
 
 }
 /*
@@ -42,11 +41,11 @@ void write_register(uint8_t reg, uint8_t val) {
  */
 void write_register_2(uint8_t reg, uint8_t Qval, uint8_t Ival) {
 
-	HAL_GPIO_WritePin (DEMOD_CS_GPIO_Port, DEMOD_CS_Pin, GPIO_PIN_RESET);
+	GPIOW(DEMOD_CS, GPIO_PIN_RESET);
 	HAL_SPI_Transmit(&hspi2, (uint8_t *)&reg, 1, 100);
 	HAL_SPI_Transmit(&hspi2, (uint8_t *)&Qval, 1, 100);
 	HAL_SPI_Transmit(&hspi2, (uint8_t *)&Ival, 1, 100);
-	HAL_GPIO_WritePin (DEMOD_CS_GPIO_Port, DEMOD_CS_Pin, GPIO_PIN_SET);
+	GPIOW(DEMOD_CS, GPIO_PIN_SET);
 
 }
 
@@ -55,10 +54,10 @@ void write_register_2(uint8_t reg, uint8_t Qval, uint8_t Ival) {
  */
 uint8_t read_register(uint8_t reg) {
 	reg ^= 0xF0;
-	HAL_GPIO_WritePin (DEMOD_CS_GPIO_Port, DEMOD_CS_Pin, GPIO_PIN_RESET);
+	GPIOW(DEMOD_CS, GPIO_PIN_RESET);
 	HAL_SPI_Transmit(&hspi2, (uint8_t *)&reg, 1, 100);
 	HAL_SPI_Receive(&hspi2, (uint8_t *)spi_buf, 1, 100);
-	HAL_GPIO_WritePin (DEMOD_CS_GPIO_Port, DEMOD_CS_Pin, GPIO_PIN_SET);
+	GPIOW(DEMOD_CS, GPIO_PIN_SET);
 	printf("Register Address: %02x: read %02x = "BYTE_TO_BINARY_PATTERN"\n", reg, spi_buf[0], BYTE_TO_BINARY(spi_buf[0]));
 	return spi_buf[0];
 }
@@ -67,11 +66,11 @@ uint8_t read_register(uint8_t reg) {
  * Sets the VCO frequency to the given input frequency by calculating and writing correct values to CMX register
  */
 void demod_set_vco(uint32_t freq, uint32_t pll_r_div) { // TODO: Clean up
-	// uint32_t pll_m = freq / demod_pll_step;
-	// uint32_t pll_r = (frequency_t)HSE_VALUE / demod_pll_step;
+
+
 
 	uint32_t pll_r = pll_r_div;
-	uint32_t pll_m = freq/10e6*pll_r_div;
+	uint32_t pll_m = freq/10e6*pll_r_div; // uint32_t pll_m = freq / demod_pll_step;
 	const uint8_t pll_r_23 = pll_r & 0xFF;
 	const uint8_t pll_r_24 = (pll_r >> 8) & 0xFF;
 	// 0x23 has to be written before 0x24
@@ -110,7 +109,7 @@ void configureRadio(){
 
 
 	/* First Enable The Radio and give LDO time to settle */
-	HAL_GPIO_WritePin(EN_3V0_GPIO_Port, EN_3V0_Pin, 1);
+	GPIOW(EN_3V0, 1);
 	HAL_Delay(200);
 
 	/* Define all the registry values */
@@ -177,20 +176,20 @@ void configureRadio(){
 
 	//RX Control Register config
 	write_register(CMX994A_RXR, CMX994A_RXR_T);
-	//printf("RX Control Register configured: 00000001\n");
-	printf("RX Control Register read:  ");
+	printf("RX Control Register configured: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(CMX994A_RXR_T));
+	printf("RX Control Register read:  \n  ");
 	read_register(CMX994A_RXR);
 
 	//Options Control Register config
 	write_register(CMX994A_OCR, CMX994A_OCR_T);
-	//printf("Options Control Register configured: 00000011\n");
-	printf("Options Control Register read:  ");
+	printf("Options Control Register configured: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(CMX994A_OCR_T));
+	printf("Options Control Register read:  \n  ");
 	read_register(CMX994A_OCR);
 
 	//VCO Control Register config
 	write_register(CMX994A_VCOCR, CMX994A_VCOCR_T);//CMX994A_VCOCR_TXDIV1
-	//printf("VCO Control Register configured: 01100011\n");
-	printf("VCO Control Register read:  ");
+	printf("VCO Control Register configured: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(CMX994A_VCOCR_T));
+	printf("VCO Control Register read:  \n  ");
 	read_register(CMX994A_VCOCR);
 
 
@@ -210,8 +209,8 @@ void configureRadio(){
 	//General Control Register config (Write this register last as it will enable the VCO)
 	write_register(CMX994A_GCR, CMX994A_GCR_T);
 
-	//printf("General Control Register configured: 10111111\n");
-	printf("General Control Register read: ");
+	printf("General Control Register configured: "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(CMX994A_GCR_T));
+	printf("General Control Register read: \n  ");
 	read_register(CMX994A_GCR);
 
 	HAL_Delay(10);

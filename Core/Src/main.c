@@ -22,9 +22,11 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+#include <string.h>
+#include "SEGGER_RTT.h"
 #include "events.h"
 #include "receiver.h"
-#include <string.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -128,8 +130,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // START RADIO RECEIVER
-  //printf("Hello space!");
+  printf("\nConfiguring radio..\n");
   configureRadio();
+  printf("Radio configured! \nPLL should be locked above^^\n\n");
 
   /* USER CODE END 2 */
 
