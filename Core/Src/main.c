@@ -63,7 +63,7 @@ the queue empty. */
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
+ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc3;
 DMA_HandleTypeDef hdma_adc1;
@@ -83,7 +83,6 @@ volatile struct eventflags eventflags;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-/*
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
@@ -96,7 +95,6 @@ static void MX_ADC1_Init(void);
 static void MX_ADC3_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
-*/
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -104,51 +102,13 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* USER CODE END 0 */
-
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
-
 static void prvQueueReceiveTask( void *pvParameters );
 static void prvQueueSendTask( void *pvParameters );
-
-/*-----------------------------------------------------------*/
 
 /* The queue used by both tasks. */
 static QueueHandle_t xQueue = NULL;
 
-int main(void)
-{
 
-	//---------------------FreeRTOS test start---------------------
-	
-	
-	/* Create the queue. */
-	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
-
-	if( xQueue != NULL )
-	{
-		/* Start the two tasks as described in the comments at the top of this
-		file. */
-		xTaskCreate( prvQueueReceiveTask,				/* The function that implements the task. */
-					"Rx", 								/* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE, 			/* The size of the stack to allocate to the task. */
-					NULL, 								/* The parameter passed to the task - not used in this case. */
-					mainQUEUE_RECEIVE_TASK_PRIORITY, 	/* The priority assigned to the task. */
-					NULL );								/* The task handle is not required, so NULL is passed. */
-
-		xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
-
-		/* Start the tasks and timer running. */
-		vTaskStartScheduler();
-	}
-
-	for( ;; );
-
-	//---------------------FreeRTOS test end-----------------------
-}
 
 static void prvQueueSendTask( void *pvParameters ) {
 
@@ -195,14 +155,97 @@ static void prvQueueReceiveTask( void *pvParameters ) {
 		if( ulReceivedValue == ulExpectedValue )
 		{
 			//mainTOGGLE_LED();
-			//GPIOW(CANLED, 1);// & (a >> 8));
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+			//GPIOW(CANLED_Pin, 1);// & (a >> 6));
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 1 & (a >> 6));
 			ulReceivedValue = 0U;
 			a++;
 		}
 	}
 }
 /*-----------------------FreeRTOStest-----------------------------------*/
+
+/* USER CODE END 0 */
+
+/**
+  * @brief  The application entry point.
+  * @retval int
+  */
+int main(void)
+{
+  /* USER CODE BEGIN 1 */
+
+	//---------------------FreeRTOS test start---------------------
+
+
+	/* Create the queue. */
+	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
+
+	if( xQueue != NULL )
+	{
+		/* Start the two tasks as described in the comments at the top of this
+		file. */
+		xTaskCreate( prvQueueReceiveTask,				/* The function that implements the task. */
+					"Rx", 								/* The text name assigned to the task - for debug only as it is not used by the kernel. */
+					configMINIMAL_STACK_SIZE, 			/* The size of the stack to allocate to the task. */
+					NULL, 								/* The parameter passed to the task - not used in this case. */
+					mainQUEUE_RECEIVE_TASK_PRIORITY, 	/* The priority assigned to the task. */
+					NULL );								/* The task handle is not required, so NULL is passed. */
+
+		xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
+
+		/* Start the tasks and timer running. */
+		vTaskStartScheduler();
+	}
+
+	for( ;; );
+
+	//---------------------FreeRTOS test end-----------------------
+  /* USER CODE END 1 */
+
+  /* MCU Configuration--------------------------------------------------------*/
+
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
+
+  /* USER CODE BEGIN Init */
+
+  /* USER CODE END Init */
+
+  /* Configure the system clock */
+  SystemClock_Config();
+
+  /* USER CODE BEGIN SysInit */
+
+  /* USER CODE END SysInit */
+
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_FDCAN1_Init();
+  MX_FDCAN2_Init();
+  MX_I2C1_Init();
+  MX_I2C4_Init();
+  MX_SPI2_Init();
+  MX_ADC1_Init();
+  MX_ADC3_Init();
+  MX_ADC2_Init();
+  MX_USB_DEVICE_Init();
+  MX_TIM1_Init();
+  /* USER CODE BEGIN 2 */
+
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  // Should never end up here because the TaskScheduler takes over control.
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
+  /* USER CODE END 3 */
+}
 
 /**
   * @brief System Clock Configuration
