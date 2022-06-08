@@ -40,12 +40,12 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 /* Priorities at which the tasks are created. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
-#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
 
 /* The rate at which data is sent to the queue.  The 200ms value is converted
 to ticks using the portTICK_PERIOD_MS constant. */
-#define mainQUEUE_SEND_FREQUENCY_MS			( 1000 / portTICK_PERIOD_MS )
+#define mainQUEUE_SEND_FREQUENCY_MS			( 100 / portTICK_PERIOD_MS )
 
 /* The number of items the queue can hold.  This is 1 as the receive task
 will remove items as they are added, meaning the send task should always find
@@ -119,25 +119,27 @@ static void prvQueueSendTask( void *pvParameters ) {
 	( void ) pvParameters;
 
 	/* Initialise xNextWakeTime - this only needs to be done once. */
-	xNextWakeTime = xTaskGetTickCount();
+	xNextWakeTime = xTaskGetTickCount();	// TODO: This is not incrementing!!!
 
 	for( ;; )
 	{
-		/* Place this task in the blocked state until it is time to run again. */
-		vTaskDelayUntil( &xNextWakeTime, mainQUEUE_SEND_FREQUENCY_MS );
 
 		/* Send to the queue - causing the queue receive task to unblock and
 		toggle the LED.  0 is used as the block time so the sending operation
 		will not block - it shouldn't need to block as the queue should always
 		be empty at this point in the code. */
 		xQueueSend( xQueue, &ulValueToSend, 0U );
+
+		/* Place this task in the blocked state until it is time to run again. */
+		vTaskDelayUntil( &xNextWakeTime, mainQUEUE_SEND_FREQUENCY_MS );
+
 	}
 }
 /*-----------------------------------------------------------*/
 
 static void prvQueueReceiveTask( void *pvParameters ) {
 
-	unsigned long ulReceivedValue;
+	unsigned long ulReceivedValue = 0;
 	const unsigned long ulExpectedValue = 100UL;
 
 	/* Remove compiler warning about unused parameter. */
@@ -148,15 +150,15 @@ static void prvQueueReceiveTask( void *pvParameters ) {
 		/* Wait until something arrives in the queue - this task will block
 		indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
 		FreeRTOSConfig.h. */
-		xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY );
+		xQueueReceive( xQueue, &ulReceivedValue, 0U );
 
 		/*  To get here something must have been received from the queue, but
 		is it the expected value?  If it is, toggle the LED. */
 		if( ulReceivedValue == ulExpectedValue )
 		{
-			//mainTOGGLE_LED();
-			//GPIOW(CANLED_Pin, 1);// & (a >> 6));
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, 1 & (a >> 6));
+			if (a % 10 == 0) {
+				HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
+			}
 			ulReceivedValue = 0U;
 			a++;
 		}
@@ -185,7 +187,7 @@ int main(void)
 		/* Start the two tasks as described in the comments at the top of this
 		file. */
 		xTaskCreate( prvQueueReceiveTask,				/* The function that implements the task. */
-					"Rx", 								/* The text name assigned to the task - for debug only as it is not used by the kernel. */
+					"RX", 								/* The text name assigned to the task - for debug only as it is not used by the kernel. */
 					configMINIMAL_STACK_SIZE, 			/* The size of the stack to allocate to the task. */
 					NULL, 								/* The parameter passed to the task - not used in this case. */
 					mainQUEUE_RECEIVE_TASK_PRIORITY, 	/* The priority assigned to the task. */
