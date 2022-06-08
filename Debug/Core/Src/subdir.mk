@@ -13,6 +13,7 @@ C_SRCS += \
 ../Core/Src/error.c \
 ../Core/Src/filter.c \
 ../Core/Src/main.c \
+../Core/Src/receiver.c \
 ../Core/Src/sdr.c \
 ../Core/Src/stm32h7xx_hal_msp.c \
 ../Core/Src/stm32h7xx_it.c \
@@ -30,6 +31,7 @@ OBJS += \
 ./Core/Src/error.o \
 ./Core/Src/filter.o \
 ./Core/Src/main.o \
+./Core/Src/receiver.o \
 ./Core/Src/sdr.o \
 ./Core/Src/stm32h7xx_hal_msp.o \
 ./Core/Src/stm32h7xx_it.o \
@@ -47,6 +49,7 @@ C_DEPS += \
 ./Core/Src/error.d \
 ./Core/Src/filter.d \
 ./Core/Src/main.d \
+./Core/Src/receiver.d \
 ./Core/Src/sdr.d \
 ./Core/Src/stm32h7xx_hal_msp.d \
 ./Core/Src/stm32h7xx_it.d \
@@ -63,7 +66,7 @@ Core/Src/%.o: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/adc.d ./Core/Src/adc.o ./Core/Src/buffer.d ./Core/Src/buffer.o ./Core/Src/bus.d ./Core/Src/bus.o ./Core/Src/dac.d ./Core/Src/dac.o ./Core/Src/decoder.d ./Core/Src/decoder.o ./Core/Src/error.d ./Core/Src/error.o ./Core/Src/filter.d ./Core/Src/filter.o ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/sdr.d ./Core/Src/sdr.o ./Core/Src/stm32h7xx_hal_msp.d ./Core/Src/stm32h7xx_hal_msp.o ./Core/Src/stm32h7xx_it.d ./Core/Src/stm32h7xx_it.o ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/system_stm32h7xx.d ./Core/Src/system_stm32h7xx.o ./Core/Src/telecommands.d ./Core/Src/telecommands.o
+	-$(RM) ./Core/Src/adc.d ./Core/Src/adc.o ./Core/Src/buffer.d ./Core/Src/buffer.o ./Core/Src/bus.d ./Core/Src/bus.o ./Core/Src/dac.d ./Core/Src/dac.o ./Core/Src/decoder.d ./Core/Src/decoder.o ./Core/Src/error.d ./Core/Src/error.o ./Core/Src/filter.d ./Core/Src/filter.o ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/receiver.d ./Core/Src/receiver.o ./Core/Src/sdr.d ./Core/Src/sdr.o ./Core/Src/stm32h7xx_hal_msp.d ./Core/Src/stm32h7xx_hal_msp.o ./Core/Src/stm32h7xx_it.d ./Core/Src/stm32h7xx_it.o ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/system_stm32h7xx.d ./Core/Src/system_stm32h7xx.o ./Core/Src/telecommands.d ./Core/Src/telecommands.o
 
 .PHONY: clean-Core-2f-Src
 

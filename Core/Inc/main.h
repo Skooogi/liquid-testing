@@ -77,39 +77,10 @@ void Error_Handler(void);
 #define GPIOW(pin, v) HAL_GPIO_WritePin(pin ## _GPIO_Port, pin ## _Pin, v)
 #define GPIOR(pin) HAL_GPIO_ReadPin(pin ## _GPIO_Port, pin ## _Pin)
 
+/* Extern the SPI handle type for receiver.c */
+extern SPI_HandleTypeDef hspi2;
 
-/* Receiver register map */
-#define CMX994A_GR			0x10
-#define CMX994A_GCR			0x11
-#define CMX994A_RXR			0x12
-#define CMX994A_RXOFFSET	0x13
-#define CMX994A_LNAINT		0x14
-#define CMX994A_OCR			0x15
-#define CMX994A_RXGR		0x16
-#define CMX994A_RXEXTOFF	0x17
-#define CMX994A_VCOCR		0x25
-#define CMX994A_PLLR23		0x23
-#define CMX994A_PLLR24		0x24
-#define CMX994A_PLLM20		0x20
-#define CMX994A_PLLM21		0x21
-#define CMX994A_PLLM22		0x22
 
-/*
- * Byte to binary convert
-*/
-#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BINARY(byte)  \
-  (byte & 0x80 ? '1' : '0'), \
-  (byte & 0x40 ? '1' : '0'), \
-  (byte & 0x20 ? '1' : '0'), \
-  (byte & 0x10 ? '1' : '0'), \
-  (byte & 0x08 ? '1' : '0'), \
-  (byte & 0x04 ? '1' : '0'), \
-  (byte & 0x02 ? '1' : '0'), \
-  (byte & 0x01 ? '1' : '0')
-
-#define TRUE 1
-#define FALSE 0
 
 
 /* USER CODE END Private defines */
