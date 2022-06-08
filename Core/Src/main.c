@@ -24,6 +24,12 @@
 /* USER CODE BEGIN Includes */
 #include "events.h"
 #include <string.h>
+
+//FreeRTOS
+#include "FreeRTOS.h"
+#include "task.h"
+#include "timers.h"
+#include "semphr.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,6 +39,22 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+/* Priorities at which the tasks are created. */
+#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
+#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+
+/* The rate at which data is sent to the queue.  The 200ms value is converted
+to ticks using the portTICK_PERIOD_MS constant. */
+#define mainQUEUE_SEND_FREQUENCY_MS			( 1000 / portTICK_PERIOD_MS )
+
+/* The number of items the queue can hold.  This is 1 as the receive task
+will remove items as they are added, meaning the send task should always find
+the queue empty. */
+#define mainQUEUE_LENGTH					( 1 )
+
+/* The LED is used to show the demo status. (not connected on Rev A hardware) */
+//#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
+#define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -41,7 +63,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
- ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc3;
 DMA_HandleTypeDef hdma_adc1;
@@ -61,6 +83,7 @@ volatile struct eventflags eventflags;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
+/*
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
@@ -73,6 +96,7 @@ static void MX_ADC1_Init(void);
 static void MX_ADC3_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
+*/
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -86,71 +110,99 @@ static void MX_TIM1_Init(void);
   * @brief  The application entry point.
   * @retval int
   */
+
+static void prvQueueReceiveTask( void *pvParameters );
+static void prvQueueSendTask( void *pvParameters );
+
+/*-----------------------------------------------------------*/
+
+/* The queue used by both tasks. */
+static QueueHandle_t xQueue = NULL;
+
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	//---------------------FreeRTOS test start---------------------
+	
+	
+	/* Create the queue. */
+	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
 
-  /* MCU Configuration--------------------------------------------------------*/
+	if( xQueue != NULL )
+	{
+		/* Start the two tasks as described in the comments at the top of this
+		file. */
+		xTaskCreate( prvQueueReceiveTask,				/* The function that implements the task. */
+					"Rx", 								/* The text name assigned to the task - for debug only as it is not used by the kernel. */
+					configMINIMAL_STACK_SIZE, 			/* The size of the stack to allocate to the task. */
+					NULL, 								/* The parameter passed to the task - not used in this case. */
+					mainQUEUE_RECEIVE_TASK_PRIORITY, 	/* The priority assigned to the task. */
+					NULL );								/* The task handle is not required, so NULL is passed. */
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+		xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
 
-  /* USER CODE BEGIN Init */
+		/* Start the tasks and timer running. */
+		vTaskStartScheduler();
+	}
 
-  /* USER CODE END Init */
+	for( ;; );
 
-  /* Configure the system clock */
-  SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_FDCAN1_Init();
-  MX_FDCAN2_Init();
-  MX_I2C1_Init();
-  MX_I2C4_Init();
-  MX_SPI2_Init();
-  MX_ADC1_Init();
-  MX_ADC3_Init();
-  MX_ADC2_Init();
-  MX_USB_DEVICE_Init();
-  MX_TIM1_Init();
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  int a = 0;
-  while (1)
-  {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-
-		/* If no flags were set by interrupts, go back to sleep */
-		if (!eventflags.dont_sleep)
-			continue;
-		eventflags.dont_sleep = 0;
-
-		/* Go through all flags to check which of them are up. Flags could indicate for example the need
-		 * for data processing or */
-		if (eventflags.tick) {
-			eventflags.tick = 0;
-			GPIOW(CANLED, 1 & (a >> 8));	// Blink LED while system is running.
-			++a;
-		}
-
-	  }
-
-  /* USER CODE END 3 */
+	//---------------------FreeRTOS test end-----------------------
 }
+
+static void prvQueueSendTask( void *pvParameters ) {
+
+	TickType_t xNextWakeTime;
+	const unsigned long ulValueToSend = 100UL;
+
+	/* Remove compiler warning about unused parameter. */
+	( void ) pvParameters;
+
+	/* Initialise xNextWakeTime - this only needs to be done once. */
+	xNextWakeTime = xTaskGetTickCount();
+
+	for( ;; )
+	{
+		/* Place this task in the blocked state until it is time to run again. */
+		vTaskDelayUntil( &xNextWakeTime, mainQUEUE_SEND_FREQUENCY_MS );
+
+		/* Send to the queue - causing the queue receive task to unblock and
+		toggle the LED.  0 is used as the block time so the sending operation
+		will not block - it shouldn't need to block as the queue should always
+		be empty at this point in the code. */
+		xQueueSend( xQueue, &ulValueToSend, 0U );
+	}
+}
+/*-----------------------------------------------------------*/
+
+static void prvQueueReceiveTask( void *pvParameters ) {
+
+	unsigned long ulReceivedValue;
+	const unsigned long ulExpectedValue = 100UL;
+
+	/* Remove compiler warning about unused parameter. */
+	( void ) pvParameters;
+	int a = 1;
+	for( ;; )
+	{
+		/* Wait until something arrives in the queue - this task will block
+		indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
+		FreeRTOSConfig.h. */
+		xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY );
+
+		/*  To get here something must have been received from the queue, but
+		is it the expected value?  If it is, toggle the LED. */
+		if( ulReceivedValue == ulExpectedValue )
+		{
+			//mainTOGGLE_LED();
+			//GPIOW(CANLED, 1);// & (a >> 8));
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+			ulReceivedValue = 0U;
+			a++;
+		}
+	}
+}
+/*-----------------------FreeRTOStest-----------------------------------*/
 
 /**
   * @brief System Clock Configuration
@@ -970,8 +1022,6 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-  /* User can add his own implementation to report the file name and line number,
-     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
