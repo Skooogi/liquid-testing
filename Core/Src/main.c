@@ -43,9 +43,9 @@
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 #define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
 
-/* The rate at which data is sent to the queue.  The 200ms value is converted
-to ticks using the portTICK_PERIOD_MS constant. */
-#define mainQUEUE_SEND_FREQUENCY_MS			( 100 / portTICK_PERIOD_MS )
+//Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
+#define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
+#define SECOND_BLINK_FREQUENCY 			( 1000 / portTICK_PERIOD_MS )
 
 /* The number of items the queue can hold.  This is 1 as the receive task
 will remove items as they are added, meaning the send task should always find
@@ -63,7 +63,7 @@ the queue empty. */
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
- ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc3;
 DMA_HandleTypeDef hdma_adc1;
@@ -83,7 +83,7 @@ volatile struct eventflags eventflags;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
+//void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_FDCAN1_Init(void);
@@ -102,68 +102,110 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-static void prvQueueReceiveTask( void *pvParameters );
-static void prvQueueSendTask( void *pvParameters );
-
 /* The queue used by both tasks. */
 static QueueHandle_t xQueue = NULL;
 
+//Used to send a signal 1UL to the xQueue for others to read.
+static void prvFirstBlinkSignal( void *pvParameters ) {
 
+	TickType_t xNextWakeTime = 0;
+	const unsigned long ulValueToSend = 1UL;
 
-static void prvQueueSendTask( void *pvParameters ) {
-
-	TickType_t xNextWakeTime;
-	const unsigned long ulValueToSend = 100UL;
-
-	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
-
-	/* Initialise xNextWakeTime - this only needs to be done once. */
-	xNextWakeTime = xTaskGetTickCount();	// TODO: This is not incrementing!!!
+	xNextWakeTime = xTaskGetTickCount();	// TODO: This is not incrementing!!! WORKS NOW :))))
 
 	for( ;; )
 	{
-
-		/* Send to the queue - causing the queue receive task to unblock and
-		toggle the LED.  0 is used as the block time so the sending operation
-		will not block - it shouldn't need to block as the queue should always
-		be empty at this point in the code. */
+		vTaskDelayUntil( &xNextWakeTime, FIRST_BLINK_FREQUENCY );
 		xQueueSend( xQueue, &ulValueToSend, 0U );
+	}
+}
 
-		/* Place this task in the blocked state until it is time to run again. */
-		vTaskDelayUntil( &xNextWakeTime, mainQUEUE_SEND_FREQUENCY_MS );
+//Second signal being sent periodically.
+static void prvSecondBlinkSignal( void *pvParameters ) {
 
+	TickType_t xNextWakeTime = 0;
+	const unsigned long ulValueToSend = 2UL;
+
+	( void ) pvParameters;
+	xNextWakeTime = xTaskGetTickCount();	
+
+	for( ;; )
+	{
+		vTaskDelayUntil( &xNextWakeTime, SECOND_BLINK_FREQUENCY);
+		xQueueSend( xQueue, &ulValueToSend, 0U );
 	}
 }
 /*-----------------------------------------------------------*/
 
-static void prvQueueReceiveTask( void *pvParameters ) {
+static void prvToggleLED( void *pvParameters ) {
 
 	unsigned long ulReceivedValue = 0;
-	const unsigned long ulExpectedValue = 100UL;
+	const unsigned long blink = 1UL;
+	const unsigned long off = 2UL;
 
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
-	int a = 1;
 	for( ;; )
 	{
 		/* Wait until something arrives in the queue - this task will block
 		indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
 		FreeRTOSConfig.h. */
-		xQueueReceive( xQueue, &ulReceivedValue, 0U );
+		xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY);
 
-		/*  To get here something must have been received from the queue, but
-		is it the expected value?  If it is, toggle the LED. */
-		if( ulReceivedValue == ulExpectedValue )
+		/*
+		 * Feel free to change. Receives a signal from the queue and based on the value,
+		 * Either blinks the LED (Signal 1) GPIO is set to 0 when initializing.
+		 * or
+		 * Sets the LED off for a second (Signal 2)
+		 *
+		 * When the second LED pin is found this can easily be changed to blink
+		 * separate LEDs in two different frequencies. Currently does a polyrythym
+		 * in order to demonstrate tasks.
+		 */
+		if( ulReceivedValue == blink)
 		{
-			if (a % 10 == 0) {
-				HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
-			}
+			HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
+			vTaskDelay(100);
+			HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
 			ulReceivedValue = 0U;
-			a++;
+		}
+
+		else if( ulReceivedValue = off) {
+			HAL_GPIO_WritePin(GPIOB, CANLED_Pin, 0);
+			vTaskDelay(1000);
 		}
 	}
 }
+
+//Initializes all needed peripherials
+//Currently only GPIO is need.
+static void pvrInitBoard() {
+
+	//HAL_Init();
+	//SystemClock_Config();
+	MX_GPIO_Init();
+	/*
+	MX_DMA_Init();
+	MX_FDCAN1_Init();
+	MX_FDCAN2_Init();
+	MX_I2C1_Init();
+	MX_I2C4_Init();
+	MX_SPI2_Init();
+	MX_ADC1_Init();
+	MX_ADC3_Init();
+	MX_ADC2_Init();
+	MX_USB_DEVICE_Init();*/
+	//MX_TIM1_Init();
+}
+
+//A tick callback used to check SysTick functionality
+//If configUSE_TICK_HOOK in FreeRTOSConfig.h is set, 
+//The program should get stuck here.
+void vApplicationTickHook(void) {
+	while(1);
+}
+
 /*-----------------------FreeRTOStest-----------------------------------*/
 
 /* USER CODE END 0 */
@@ -177,23 +219,21 @@ int main(void)
   /* USER CODE BEGIN 1 */
 
 	//---------------------FreeRTOS test start---------------------
-
+	
+	pvrInitBoard();
 
 	/* Create the queue. */
 	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
 
 	if( xQueue != NULL )
 	{
-		/* Start the two tasks as described in the comments at the top of this
-		file. */
-		xTaskCreate( prvQueueReceiveTask,				/* The function that implements the task. */
-					"RX", 								/* The text name assigned to the task - for debug only as it is not used by the kernel. */
-					configMINIMAL_STACK_SIZE, 			/* The size of the stack to allocate to the task. */
-					NULL, 								/* The parameter passed to the task - not used in this case. */
-					mainQUEUE_RECEIVE_TASK_PRIORITY, 	/* The priority assigned to the task. */
-					NULL );								/* The task handle is not required, so NULL is passed. */
 
-		xTaskCreate( prvQueueSendTask, "TX", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
+		//Creates both of the tasks that send signals to xQueue.
+		xTaskCreate( prvFirstBlinkSignal, "F1", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
+		xTaskCreate( prvSecondBlinkSignal, "F2", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
+
+		//Task that listens to the xQueue
+		xTaskCreate( prvToggleLED, "LED", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
 
 		/* Start the tasks and timer running. */
 		vTaskStartScheduler();
@@ -214,7 +254,7 @@ int main(void)
   /* USER CODE END Init */
 
   /* Configure the system clock */
-  SystemClock_Config();
+  //SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
@@ -253,28 +293,30 @@ int main(void)
   * @brief System Clock Configuration
   * @retval None
   */
+
+//SystemClock_Config MUST BE COMMENTED OUT.
+//This overwrites FreeRTOS implementation and breaks system timers.
+
+/*
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  /** Supply configuration update enable
-  */
+  // Supply configuration update enable
   HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
-  /** Configure the main internal regulator output voltage
-  */
+  // Configure the main internal regulator output voltage
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
-  /** Macro to configure the PLL clock source
-  */
+  // Macro to configure the PLL clock source
   __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSE);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
+  // Initializes the RCC Oscillators according to the specified parameters
+  // in the RCC_OscInitTypeDef structure.
+  
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -292,8 +334,8 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
+  //Initializes the CPU, AHB and APB buses clocks
+  
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
@@ -310,7 +352,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
-
+*/
 /**
   * @brief ADC1 Initialization Function
   * @param None
