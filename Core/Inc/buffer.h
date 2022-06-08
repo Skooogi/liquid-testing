@@ -13,18 +13,17 @@
 
 #include <stdint.h>
 
-struct result_buffer {
+typedef struct resultbuffer {
 
 	uint8_t data[RESULT_BUFFER_SIZE];	// Buffer for decoded AIS messages that wait to be sent onward to the OBC.
 	uint32_t head;						// Result buffer head index.
 	uint32_t tail;						// Result buffer tail index.
 	uint16_t length;					// Amount of new data in the result buffer (in bytes).
 
-};
+} *resultbuf_t;
 
 /* Declare the extern struct resultbuf. */
-typedef struct result_buffer *result_buffer_t;
-extern struct result_buffer result_buf;
+extern struct resultbuffer resultbuf;
 
 // Some static helper functions are found in buffer.c but not here.
 

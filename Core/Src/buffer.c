@@ -10,27 +10,27 @@
 #include "buffer.h"
 
 /* Define instance of the result buffer. */
-struct result_buffer result_buf;
+struct resultbuffer resultbuf;
 
 
 /* Push a single byte of data to the result buffer. */
 static void buffer_push(uint8_t data)
 {
-	result_buf.data[result_buf.head] = data;
-	result_buf.head = (result_buf.head + 1) & (RESULT_BUFFER_SIZE - 1);
+	resultbuf.data[resultbuf.head] = data;
+	resultbuf.head = (resultbuf.head + 1) & (RESULT_BUFFER_SIZE - 1);
 	if (buffer_length() == buffer_max_size()) {
-		result_buf.tail = (result_buf.head + 1) & (RESULT_BUFFER_SIZE - 1);
+		resultbuf.tail = (resultbuf.head + 1) & (RESULT_BUFFER_SIZE - 1);
 	} else {
-		result_buf.length += 1;
+		resultbuf.length += 1;
 	}
 }
 
 
 void buffer_reset()
 {
-	result_buf.head = 0;
-	result_buf.tail = 0;
-	result_buf.length = 0;
+	resultbuf.head = 0;
+	resultbuf.tail = 0;
+	resultbuf.length = 0;
 }
 
 
@@ -42,7 +42,7 @@ int buffer_max_size() {
 
 /* Ask the length of the buffer, e.g. how many bytes of data is currently contained. */
 int buffer_length() {
-	return result_buf.length;
+	return resultbuf.length;
 }
 
 
@@ -63,9 +63,9 @@ void buffer_push_n(uint8_t data[], uint32_t n) {
 /* Pop one byte of data from the result buffer. */
 static int buffer_pop() {
 	if (!buffer_is_empty()) {
-		uint8_t value = result_buf.data[result_buf.tail];
-		result_buf.tail = (result_buf.tail + 1) & (RESULT_BUFFER_SIZE - 1);
-		result_buf.length -= 1;
+		uint8_t value = resultbuf.data[resultbuf.tail];
+		resultbuf.tail = (resultbuf.tail + 1) & (RESULT_BUFFER_SIZE - 1);
+		resultbuf.length -= 1;
 		return value;
 	} else {
 		// TODO: Handle error if function is called for an empty buffer (alternatively check buffer status before calling this)
