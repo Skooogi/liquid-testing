@@ -1,5 +1,5 @@
-.settings/
-Debug/
+.settings/**
+Debug/**
 build/
 cmake/
 debug
