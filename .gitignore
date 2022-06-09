@@ -7,3 +7,4 @@ debug
 Makefile
 STM32H743ZITx_FLASH.ld
 startup_stm32h743xx.s
+.cproject
