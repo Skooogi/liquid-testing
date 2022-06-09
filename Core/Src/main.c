@@ -141,6 +141,7 @@ static void prvSecondBlinkSignal( void *pvParameters ) {
 	for( ;; )
 	{
 		vTaskDelayUntil( &xNextWakeTime, SECOND_BLINK_FREQUENCY);
+		printf("Radio: PLL locked (1/0): %d \n", demod_is_locked());
 		xQueueSend( xQueue, &ulValueToSend, 0U );
 	}
 }
@@ -190,10 +191,9 @@ static void prvToggleLED( void *pvParameters ) {
 //Currently only GPIO is need.
 static void pvrInitBoard() {
 
-	//HAL_Init();
-	//SystemClock_Config();
+	HAL_Init();
+	SystemClock_Config();
 	MX_GPIO_Init();
-	/*
 	MX_DMA_Init();
 	MX_FDCAN1_Init();
 	MX_FDCAN2_Init();
@@ -203,8 +203,8 @@ static void pvrInitBoard() {
 	MX_ADC1_Init();
 	MX_ADC3_Init();
 	MX_ADC2_Init();
-	MX_USB_DEVICE_Init();*/
-	//MX_TIM1_Init();
+	MX_USB_DEVICE_Init();
+	MX_TIM1_Init();
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
@@ -298,7 +298,7 @@ int main(void)
 //SystemClock_Config MUST BE COMMENTED OUT.
 //This overwrites FreeRTOS implementation and breaks system timers.
 
-/*
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -353,7 +353,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
-*/
+
 /**
   * @brief ADC1 Initialization Function
   * @param None
