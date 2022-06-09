@@ -3,9 +3,19 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "timers.h"
+
+#include <string.h>
 /*
  * RTT communication and some useful functions.
  */
+
+void readRTT(char* p) {
+	*p = SEGGER_RTT_WaitKey();
+}
+
+void writeRTT(char* p) {
+	SEGGER_RTT_Write(0,p,strlen(p));
+}
 
 //Listens to Terminal 0 and awaits user input.
 void prvDebugRTT( void *pvParameters ) {
@@ -13,18 +23,16 @@ void prvDebugRTT( void *pvParameters ) {
 	( void ) pvParameters;
 
 	char* text = calloc(256, 1);
-	SEGGER_RTT_TerminalOut(0, "Debugger online!");
+	writeRTT("Debugger online!");
 
 	for( ;; )
 	{
-		*text = SEGGER_RTT_WaitKey(); //Halts task until user sends input.
-		SEGGER_RTT_TerminalOut(0, text); //Prints the input back into the terminal.
+		readRTT(text); //Halts task until user sends input.
+		writeRTT(text); //Prints the input back into the terminal.
 	}
 
 	free(text);
 }
-
-//TODO print and scan overrites
 
 void pulseLED(int ms_duration, int ms_pause) {
 	HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
