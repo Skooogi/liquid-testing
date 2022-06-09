@@ -19,10 +19,12 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
+#include "receiver.h"
+#include "SEGGER_RTT.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "events.h"
+#include <stdio.h>
 #include <string.h>
 
 //FreeRTOS
@@ -30,6 +32,9 @@
 #include "task.h"
 #include "timers.h"
 #include "semphr.h"
+#include "SEGGER_RTT.h"
+#include "events.h"
+#include "receiver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -80,6 +85,9 @@ TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
 volatile struct eventflags eventflags;
+
+
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -197,6 +205,9 @@ static void pvrInitBoard() {
 	MX_ADC2_Init();
 	MX_USB_DEVICE_Init();*/
 	//MX_TIM1_Init();
+	printf("\nConfiguring radio..\n");
+	configureRadio();
+	printf("Radio configured! \nPLL should be locked above^^\n\n");
 }
 
 //A tick callback used to check SysTick functionality
@@ -275,17 +286,7 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  // Should never end up here because the TaskScheduler takes over control.
-  while (1)
-  {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
-  }
+  // START RADIO RECEIVER
   /* USER CODE END 3 */
 }
 
