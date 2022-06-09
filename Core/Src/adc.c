@@ -7,3 +7,9 @@
 
 #include "adc.h"
 
+prvADCTask( void *pvParameters )
+{
+	( void ) pvParameters;
+	// TODO: Read data that has been received by the ADC.
+}
+

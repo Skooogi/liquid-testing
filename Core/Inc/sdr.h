@@ -19,7 +19,7 @@ struct sdr {
 
 
 /************* Publicly callable functions *************/
-void sdr_change_mode(int new_mode);		// Change the operation mode of the SDR
+void sdr_change_mode(int new_mode);			// Change the operation mode of the SDR
 
 
 #endif /* INC_SDR_H_ */

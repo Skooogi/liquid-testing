@@ -18,6 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dsp.h"
+#include "cubesat_protocol.h"
 #include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -41,7 +44,8 @@
 /* USER CODE BEGIN PD */
 /* Priorities at which the tasks are created. */
 #define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
-#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
+#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+
 
 //Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
 #define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
@@ -102,8 +106,13 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
+
+/******************************************* BLINK TEST BEGIN *******************************************/
+
 /* The queue used by both tasks. */
 static QueueHandle_t xQueue = NULL;
+
 
 //Used to send a signal 1UL to the xQueue for others to read.
 static void prvFirstBlinkSignal( void *pvParameters ) {
@@ -112,7 +121,7 @@ static void prvFirstBlinkSignal( void *pvParameters ) {
 	const unsigned long ulValueToSend = 1UL;
 
 	( void ) pvParameters;
-	xNextWakeTime = xTaskGetTickCount();	// TODO: This is not incrementing!!! WORKS NOW :))))
+	xNextWakeTime = xTaskGetTickCount();
 
 	for( ;; )
 	{
@@ -160,9 +169,10 @@ static void prvToggleLED( void *pvParameters ) {
 		 * Sets the LED off for a second (Signal 2)
 		 *
 		 * When the second LED pin is found this can easily be changed to blink
-		 * separate LEDs in two different frequencies. Currently does a polyrythym
+		 * separate LEDs in two different frequencies. Currently does a polyrythm
 		 * in order to demonstrate tasks.
 		 */
+
 		if( ulReceivedValue == blink)
 		{
 			HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
@@ -177,6 +187,11 @@ static void prvToggleLED( void *pvParameters ) {
 		}
 	}
 }
+
+/******************************************** BLINK TEST END ********************************************/
+
+
+
 
 //Initializes all needed peripherials
 //Currently only GPIO is need.
@@ -201,12 +216,11 @@ static void pvrInitBoard() {
 
 //A tick callback used to check SysTick functionality
 //If configUSE_TICK_HOOK in FreeRTOSConfig.h is set, 
-//The program should get stuck here.
+//the program should get stuck here.
 void vApplicationTickHook(void) {
 	while(1);
 }
 
-/*-----------------------FreeRTOStest-----------------------------------*/
 
 /* USER CODE END 0 */
 
@@ -218,15 +232,19 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	//---------------------FreeRTOS test start---------------------
+
+
+	/******************************************* FREERTOS TEST BEGIN *******************************************/
 	
 	pvrInitBoard();
 
-	/* Create the queue. */
+	/* Create the queues. */
 	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
 
 	if( xQueue != NULL )
 	{
+
+		/************************************ FREE RTOS TEST BEGIN ************************************/
 
 		//Creates both of the tasks that send signals to xQueue.
 		xTaskCreate( prvFirstBlinkSignal, "F1", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
@@ -235,13 +253,29 @@ int main(void)
 		//Task that listens to the xQueue
 		xTaskCreate( prvToggleLED, "LED", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
 
+		/************************************ FREE RTOS TEST END ************************************/
+
+
+
+		/* Task acquiring latest ADC data */
+		xTaskCreate( prvADCTask, "ADCTask", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
+
+		/* Task taking care of digital signal processing */
+		xTaskCreate( prvDSPTask, "DSPTask", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+
+		/* Task handle data bus (CubeSat protocol) */
+		xTaskCreate( prvCSPTask , "CSPTask", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+
 		/* Start the tasks and timer running. */
 		vTaskStartScheduler();
 	}
 
 	for( ;; );
 
-	//---------------------FreeRTOS test end-----------------------
+	/******************************************** FREERTOS TEST END *******************************************/
+
+
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
