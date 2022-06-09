@@ -20,7 +20,7 @@
 #include "main.h"
 #include "usb_device.h"
 #include "receiver.h"
-#include "SEGGER_RTT.h"
+#include "debugRTT.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -34,34 +34,15 @@
 #include "semphr.h"
 #include "SEGGER_RTT.h"
 #include "events.h"
-#include "receiver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define TERMINAL_PRIORITY 	(tskIDLE_PRIORITY + 1)
+#define BLINK_PRIORITY 		(tskIDLE_PRIORITY + 2)
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* Priorities at which the tasks are created. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
-#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 2 )
-
-//Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
-#define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
-#define SECOND_BLINK_FREQUENCY 			( 1000 / portTICK_PERIOD_MS )
-
-/* The number of items the queue can hold.  This is 1 as the receive task
-will remove items as they are added, meaning the send task should always find
-the queue empty. */
-#define mainQUEUE_LENGTH					( 1 )
-
-/* The LED is used to show the demo status. (not connected on Rev A hardware) */
-//#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
-#define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
-/* USER CODE END PD */
-
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
@@ -105,85 +86,19 @@ static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
+static void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* The queue used by both tasks. */
-static QueueHandle_t xQueue = NULL;
-
-//Used to send a signal 1UL to the xQueue for others to read.
-static void prvFirstBlinkSignal( void *pvParameters ) {
-
-	TickType_t xNextWakeTime = 0;
-	const unsigned long ulValueToSend = 1UL;
-
-	( void ) pvParameters;
-	xNextWakeTime = xTaskGetTickCount();	// TODO: This is not incrementing!!! WORKS NOW :))))
-
-	for( ;; )
-	{
-		vTaskDelayUntil( &xNextWakeTime, FIRST_BLINK_FREQUENCY );
-		xQueueSend( xQueue, &ulValueToSend, 0U );
-	}
-}
-
-//Second signal being sent periodically.
-static void prvSecondBlinkSignal( void *pvParameters ) {
-
-	TickType_t xNextWakeTime = 0;
-	const unsigned long ulValueToSend = 2UL;
-
-	( void ) pvParameters;
-	xNextWakeTime = xTaskGetTickCount();	
-
-	for( ;; )
-	{
-		vTaskDelayUntil( &xNextWakeTime, SECOND_BLINK_FREQUENCY);
-		printf("Radio: PLL locked (1/0): %d \n", demod_is_locked());
-		xQueueSend( xQueue, &ulValueToSend, 0U );
-	}
-}
-/*-----------------------------------------------------------*/
-
-static void prvToggleLED( void *pvParameters ) {
-
-	unsigned long ulReceivedValue = 0;
-	const unsigned long blink = 1UL;
-	const unsigned long off = 2UL;
+static void prvBlinkLED( void *pvParameters ) {
 
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
 	for( ;; )
 	{
-		/* Wait until something arrives in the queue - this task will block
-		indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
-		FreeRTOSConfig.h. */
-		xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY);
-
-		/*
-		 * Feel free to change. Receives a signal from the queue and based on the value,
-		 * Either blinks the LED (Signal 1) GPIO is set to 0 when initializing.
-		 * or
-		 * Sets the LED off for a second (Signal 2)
-		 *
-		 * When the second LED pin is found this can easily be changed to blink
-		 * separate LEDs in two different frequencies. Currently does a polyrythym
-		 * in order to demonstrate tasks.
-		 */
-		if( ulReceivedValue == blink)
-		{
-			HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
-			vTaskDelay(100);
-			HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
-			ulReceivedValue = 0U;
-		}
-
-		else if( ulReceivedValue = off) {
-			HAL_GPIO_WritePin(GPIOB, CANLED_Pin, 0);
-			vTaskDelay(1000);
-		}
+		pulseLED(500,250);
 	}
 }
 
@@ -233,22 +148,14 @@ int main(void)
 	
 	pvrInitBoard();
 
-	/* Create the queue. */
-	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
+	//Starts debug terminal.
+	xTaskCreate( prvDebugRTT, "RTT", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
-	if( xQueue != NULL )
-	{
+	//Blinks the LED
+	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
-		//Creates both of the tasks that send signals to xQueue.
-		xTaskCreate( prvFirstBlinkSignal, "F1", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-		xTaskCreate( prvSecondBlinkSignal, "F2", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-
-		//Task that listens to the xQueue
-		xTaskCreate( prvToggleLED, "LED", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
-
-		/* Start the tasks and timer running. */
-		vTaskStartScheduler();
-	}
+	/* Start the tasks and timer running. */
+	vTaskStartScheduler();
 
 	for( ;; );
 
