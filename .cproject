@@ -1407,6 +1407,7 @@
 					</folderInfo>
 				</configuration>
 			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
@@ -1415,7 +1416,6 @@
 		<project id="Kvarkensat.null.1701926132" name="Kvarkensat"/>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
-	<storageModule moduleId="refreshScope"/>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.503084661;com.st.stm32cube.ide.mcu.gnu.managedbuild.config.exe.release.503084661.;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.831956779;com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.383652648">

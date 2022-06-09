@@ -77,6 +77,12 @@ void Error_Handler(void);
 #define GPIOW(pin, v) HAL_GPIO_WritePin(pin ## _GPIO_Port, pin ## _Pin, v)
 #define GPIOR(pin) HAL_GPIO_ReadPin(pin ## _GPIO_Port, pin ## _Pin)
 
+/* Extern the SPI handle type for receiver.c */
+extern SPI_HandleTypeDef hspi2;
+
+
+
+
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
