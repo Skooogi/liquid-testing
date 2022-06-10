@@ -79,6 +79,15 @@ void Error_Handler(void);
 
 /* Extern the SPI handle type for receiver.c */
 extern SPI_HandleTypeDef hspi2;
+#define RXSPI (&hspi2)
+
+/* Extern the  */
+extern ADC_HandleTypeDef hadc1;
+#define ADCI (&hadc1)			// ADC responsible for I data
+
+extern ADC_HandleTypeDef hadc3;
+#define ADCQ (&hadc1)			// ADC responsible for Q data
+
 
 
 

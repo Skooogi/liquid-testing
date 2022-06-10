@@ -6,7 +6,7 @@
 #include "cubesat_protocol.h"
 
 
-/* Task for digital signal processing of the RF signals */
+/* Task for handling the CubeSat Protocol, i.e the command interface of the payload */
 void prvCSPTask( void *pvParameters )
 {
 
