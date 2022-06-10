@@ -1,11 +1,7 @@
 /*
  * sdr.c
  *
- * This file contains functions controlling the SDR payload generally on a relatively high level.
- * The functions of this file are called when a certain functionality is expected from the SDR.
- * The functions in this file rely heavily on lower level functions in other files. This means that
- * for instance controlling the ADC, filtering or other signal processing is implemented in functions
- * elsewhere. Here these lower level functions are only called based on higher level objectives.
+ * This file contains functions to control the state (e.g. the operating mode of the payload)
  *
  */
 #include "sdr.h"
@@ -25,6 +21,3 @@ void sdr_change_mode(int new_mode)
 {
 	// TODO: Change mode!
 }
-
-
-// TODO: All other nice functions

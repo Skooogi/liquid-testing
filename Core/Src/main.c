@@ -18,6 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
+#include "dsp.h"
+#include "cubesat_protocol.h"
 #include "usb_device.h"
 #include "receiver.h"
 #include "debugRTT.h"
@@ -43,6 +46,27 @@
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+/* Priorities at which the tasks are created. */
+#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+
+
+//Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
+#define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
+#define SECOND_BLINK_FREQUENCY 			( 1000 / portTICK_PERIOD_MS )
+
+/* The number of items the queue can hold.  This is 1 as the receive task
+will remove items as they are added, meaning the send task should always find
+the queue empty. */
+#define mainQUEUE_LENGTH					( 1 )
+
+/* The LED is used to show the demo status. (not connected on Rev A hardware) */
+//#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
+#define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
+/* USER CODE END PD */
+
+
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
@@ -92,6 +116,7 @@ static void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+
 static void prvBlinkLED( void *pvParameters ) {
 
 	/* Remove compiler warning about unused parameter. */
@@ -101,6 +126,8 @@ static void prvBlinkLED( void *pvParameters ) {
 		pulseLED(500,250);
 	}
 }
+
+
 
 //Initializes all needed peripherials
 //Currently only GPIO is need.
@@ -127,12 +154,11 @@ static void pvrInitBoard() {
 
 //A tick callback used to check SysTick functionality
 //If configUSE_TICK_HOOK in FreeRTOSConfig.h is set, 
-//The program should get stuck here.
+//the program should get stuck here.
 void vApplicationTickHook(void) {
 	while(1);
 }
 
-/*-----------------------FreeRTOStest-----------------------------------*/
 
 /* USER CODE END 0 */
 
@@ -144,28 +170,49 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-	//---------------------FreeRTOS test start---------------------
+
+
+	/******************************************* FREERTOS TEST BEGIN *******************************************/
 	
 	pvrInitBoard();
+
+		/************************************ FREE RTOS TEST BEGIN ************************************/
 
 	//Starts debug terminal.
 	xTaskCreate( prvDebugRTT, "RTT", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
+
 	//Blinks the LED
 	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
+
+
+	/************************************ FREE RTOS TEST END ************************************/
+
+	/* Task acquiring latest ADC data */
+	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
+
+	/* Task taking care of digital signal processing */
+	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+
+	/* Task handle data bus (CubeSat protocol) */
+	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
 
+
 	for( ;; );
 
-	//---------------------FreeRTOS test end-----------------------
+	/******************************************** FREERTOS TEST END *******************************************/
+
+
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+  //HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -179,18 +226,7 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_FDCAN1_Init();
-  MX_FDCAN2_Init();
-  MX_I2C1_Init();
-  MX_I2C4_Init();
-  MX_SPI2_Init();
-  MX_ADC1_Init();
-  MX_ADC3_Init();
-  MX_ADC2_Init();
-  MX_USB_DEVICE_Init();
-  MX_TIM1_Init();
+
   /* USER CODE BEGIN 2 */
 
   // START RADIO RECEIVER
@@ -1020,3 +1056,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
