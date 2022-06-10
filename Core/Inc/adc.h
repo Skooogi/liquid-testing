@@ -7,6 +7,7 @@
 #define INC_ADC_H_
 
 #include <stdint.h>
+#include "main.h"
 
 #define ADC_RX_PRIORITY	( tskIDLE_PRIORITY + 1 )
 
@@ -36,22 +37,9 @@
 /****** Only for prerecorded test data END ******/
 
 
-#include "math.h"
-#include "usbd_cdc_if.h"
-#include "complex.h"
-//#include "arm_math.h"
-//#include "arm_const_structs.h"
-
-//#include "../../Drivers/gnu-ais/callbacks.h"
-//#include "../../Drivers/gnu-ais/filter.h"
-//#include "../../Drivers/gnu-ais/hmalloc.h"
-//#include "../../Drivers/gnu-ais/protodec.h"
-//#include "../../Drivers/gnu-ais/receiver.h"
-
-
 typedef struct mcuadc {
 
-	ALIGN_32BYTES (uint16_t   rx_buf[ADC_RX_BUF_SIZE]);
+	ALIGN_32BYTES (uint16_t  rx_buf[ADC_RX_BUF_SIZE]);
 	ALIGN_32BYTES (int16_t 	 data[ADC_RX_BUF_SIZE]);
 	ALIGN_32BYTES (int16_t 	 data_fir[ADC_RX_BUF_SIZE]);
 
@@ -63,8 +51,9 @@ extern struct mcuadc adcQ;
 
 
 /************* Publicly callable functions *************/
-/* Task acquiring latest ADC data */
-void prvADCTask( void *pvParameters );
-void prvADCInit();
+void prvADCTask( void *pvParameters );							// Task acquiring latest ADC data
+void prvADCInit();												// Initialize the state of the ADC
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc);		// ADC conversion half complete callback
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc);			// ADC conversion complete callback
 
 #endif /* INC_ADC_H_ */

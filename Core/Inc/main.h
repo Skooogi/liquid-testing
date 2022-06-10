@@ -86,7 +86,7 @@ extern ADC_HandleTypeDef hadc1;
 #define ADCI (&hadc1)			// ADC responsible for I data
 
 extern ADC_HandleTypeDef hadc3;
-#define ADCQ (&hadc1)			// ADC responsible for Q data
+#define ADCQ (&hadc3)			// ADC responsible for Q data
 
 
 
