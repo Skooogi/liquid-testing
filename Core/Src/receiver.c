@@ -11,6 +11,8 @@
 #include <stdio.h>
 #include "receiver.h"
 #include "main.h"
+#include "FreeRTOS.h"
+#include "timers.h"
 
 
 // Buffer to hold SPI response from CMX994 receiver
@@ -95,7 +97,7 @@ void demod_set_vco(uint32_t freq, uint32_t pll_r_div) { // TODO: Clean up
  * Check from register if VCO is frequency locked
  */
 uint8_t demod_is_locked(){
-	return ( read_register(CMX994A_PLLM22) & (1<<6)) ? 0 : 1;
+	return ( read_register(CMX994A_PLLM22) & (1<<6)) ? 1 : 0;
 }
 
 void configureRadio(){
@@ -111,6 +113,7 @@ void configureRadio(){
 	/* First Enable The Radio and give LDO time to settle */
 	GPIOW(EN_3V0, 1);
 	HAL_Delay(200);
+	//vTaskDelay(200);
 
 	/* Define all the registry values */
 	uint8_t CMX994A_GCR_T = 0b10101111;
@@ -213,7 +216,7 @@ void configureRadio(){
 	printf("General Control Register read: \n  ");
 	read_register(CMX994A_GCR);
 
-	HAL_Delay(10);
+	HAL_Delay(200); //was 10ms, but next check didn't see a lock
 
 	printf("Radio: PLL locked (1/0): %d \n", demod_is_locked());
 	HAL_Delay(1000);

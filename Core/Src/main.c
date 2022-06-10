@@ -23,7 +23,7 @@
 #include "cubesat_protocol.h"
 #include "usb_device.h"
 #include "receiver.h"
-#include "SEGGER_RTT.h"
+#include "debugRTT.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -37,12 +37,12 @@
 #include "semphr.h"
 #include "SEGGER_RTT.h"
 #include "events.h"
-#include "receiver.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+#define TERMINAL_PRIORITY 	(tskIDLE_PRIORITY + 1)
+#define BLINK_PRIORITY 		(tskIDLE_PRIORITY + 2)
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -65,6 +65,7 @@ the queue empty. */
 //#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
 #define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
 /* USER CODE END PD */
+
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
@@ -109,95 +110,22 @@ static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
+static void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
 
-
-/******************************************* BLINK TEST BEGIN *******************************************/
-
-/* The queue used by both tasks. */
-static QueueHandle_t xQueue = NULL;
-
-
-//Used to send a signal 1UL to the xQueue for others to read.
-static void prvFirstBlinkSignal( void *pvParameters ) {
-
-	TickType_t xNextWakeTime = 0;
-	const unsigned long ulValueToSend = 1UL;
-
-	( void ) pvParameters;
-	xNextWakeTime = xTaskGetTickCount();
-
-	for( ;; )
-	{
-		vTaskDelayUntil( &xNextWakeTime, FIRST_BLINK_FREQUENCY );
-		xQueueSend( xQueue, &ulValueToSend, 0U );
-	}
-}
-
-//Second signal being sent periodically.
-static void prvSecondBlinkSignal( void *pvParameters ) {
-
-	TickType_t xNextWakeTime = 0;
-	const unsigned long ulValueToSend = 2UL;
-
-	( void ) pvParameters;
-	xNextWakeTime = xTaskGetTickCount();	
-
-	for( ;; )
-	{
-		vTaskDelayUntil( &xNextWakeTime, SECOND_BLINK_FREQUENCY);
-		xQueueSend( xQueue, &ulValueToSend, 0U );
-	}
-}
-/*-----------------------------------------------------------*/
-
-static void prvToggleLED( void *pvParameters ) {
-
-	unsigned long ulReceivedValue = 0;
-	const unsigned long blink = 1UL;
-	const unsigned long off = 2UL;
+static void prvBlinkLED( void *pvParameters ) {
 
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
 	for( ;; )
 	{
-		/* Wait until something arrives in the queue - this task will block
-		indefinitely provided INCLUDE_vTaskSuspend is set to 1 in
-		FreeRTOSConfig.h. */
-		xQueueReceive( xQueue, &ulReceivedValue, portMAX_DELAY);
-
-		/*
-		 * Feel free to change. Receives a signal from the queue and based on the value,
-		 * Either blinks the LED (Signal 1) GPIO is set to 0 when initializing.
-		 * or
-		 * Sets the LED off for a second (Signal 2)
-		 *
-		 * When the second LED pin is found this can easily be changed to blink
-		 * separate LEDs in two different frequencies. Currently does a polyrythm
-		 * in order to demonstrate tasks.
-		 */
-
-		if( ulReceivedValue == blink)
-		{
-			HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
-			vTaskDelay(100);
-			HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
-			ulReceivedValue = 0U;
-		}
-
-		else if( ulReceivedValue = off) {
-			HAL_GPIO_WritePin(GPIOB, CANLED_Pin, 0);
-			vTaskDelay(1000);
-		}
+		pulseLED(500,250);
 	}
 }
-
-/******************************************** BLINK TEST END ********************************************/
-
 
 
 
@@ -205,10 +133,9 @@ static void prvToggleLED( void *pvParameters ) {
 //Currently only GPIO is need.
 static void pvrInitBoard() {
 
-	//HAL_Init();
-	//SystemClock_Config();
+	HAL_Init();
+	SystemClock_Config();
 	MX_GPIO_Init();
-	/*
 	MX_DMA_Init();
 	MX_FDCAN1_Init();
 	MX_FDCAN2_Init();
@@ -218,8 +145,8 @@ static void pvrInitBoard() {
 	MX_ADC1_Init();
 	MX_ADC3_Init();
 	MX_ADC2_Init();
-	MX_USB_DEVICE_Init();*/
-	//MX_TIM1_Init();
+	MX_USB_DEVICE_Init();
+	MX_TIM1_Init();
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
@@ -249,37 +176,30 @@ int main(void)
 	
 	pvrInitBoard();
 
-	/* Create the queues. */
-	xQueue = xQueueCreate( mainQUEUE_LENGTH, sizeof( uint32_t ) );
-
-	if( xQueue != NULL )
-	{
-
 		/************************************ FREE RTOS TEST BEGIN ************************************/
 
-		//Creates both of the tasks that send signals to xQueue.
-		xTaskCreate( prvFirstBlinkSignal, "F1", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-		xTaskCreate( prvSecondBlinkSignal, "F2", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_RECEIVE_TASK_PRIORITY, NULL );
-
-		//Task that listens to the xQueue
-		xTaskCreate( prvToggleLED, "LED", configMINIMAL_STACK_SIZE, NULL, mainQUEUE_SEND_TASK_PRIORITY, NULL );
-
-		/************************************ FREE RTOS TEST END ************************************/
+	//Starts debug terminal.
+	xTaskCreate( prvDebugRTT, "RTT", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
 
+	//Blinks the LED
+	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
-		/* Task acquiring latest ADC data */
-		xTaskCreate( prvADCTask, "ADCTask", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
-		/* Task taking care of digital signal processing */
-		xTaskCreate( prvDSPTask, "DSPTask", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+	/************************************ FREE RTOS TEST END ************************************/
 
-		/* Task handle data bus (CubeSat protocol) */
-		xTaskCreate( prvCSPTask , "CSPTask", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+	/* Task acquiring latest ADC data */
+	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
-		/* Start the tasks and timer running. */
-		vTaskStartScheduler();
-	}
+	/* Task taking care of digital signal processing */
+	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+
+	/* Task handle data bus (CubeSat protocol) */
+	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+
+	/* Start the tasks and timer running. */
+	vTaskStartScheduler();
+
 
 	for( ;; );
 
@@ -292,7 +212,7 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+  //HAL_Init();
 
   /* USER CODE BEGIN Init */
 
@@ -306,18 +226,7 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_DMA_Init();
-  MX_FDCAN1_Init();
-  MX_FDCAN2_Init();
-  MX_I2C1_Init();
-  MX_I2C4_Init();
-  MX_SPI2_Init();
-  MX_ADC1_Init();
-  MX_ADC3_Init();
-  MX_ADC2_Init();
-  MX_USB_DEVICE_Init();
-  MX_TIM1_Init();
+
   /* USER CODE BEGIN 2 */
 
   // START RADIO RECEIVER
@@ -332,7 +241,7 @@ int main(void)
 //SystemClock_Config MUST BE COMMENTED OUT.
 //This overwrites FreeRTOS implementation and breaks system timers.
 
-/*
+
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -387,7 +296,7 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
-*/
+
 /**
   * @brief ADC1 Initialization Function
   * @param None
@@ -1147,3 +1056,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
