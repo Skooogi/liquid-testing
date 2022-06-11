@@ -11,8 +11,8 @@
 #include "math.h"
 #include "usbd_cdc_if.h"
 #include "complex.h"
-//#include "arm_math.h"
-//#include "arm_const_structs.h"
+#include "arm_math.h"
+#include "arm_const_structs.h"
 
 //#include "../../Drivers/gnu-ais/callbacks.h"
 //#include "../../Drivers/gnu-ais/filter.h"
@@ -20,15 +20,22 @@
 //#include "../../Drivers/gnu-ais/protodec.h"
 //#include "../../Drivers/gnu-ais/receiver.h"
 
+
+
 uint32_t prim;
 
 /* Instance of ADC data and state struct for ADCI (&hadc1) */
-struct mcuadc adcI = {
+struct rfadc adcI = {
 
 };
 
-/* Instance of ADC data and state struct for ADCQ (&hadc3) */
-struct mcuadc adcQ = {
+/* Instance of ADC data and state struct for ADCQ (&hadc2) */
+struct rfadc adcQ = {
+
+};
+
+/* Instance of ADC data and state struct for ADCT (&hadc3) */
+struct tempadc adcT = {
 
 };
 
@@ -36,13 +43,39 @@ struct mcuadc adcQ = {
 void prvADCTask( void *pvParameters )
 {
 	( void ) pvParameters;
-	// TODO: Read data that has been received by the ADC.
+	// TODO: Implement! :)
+	prvADCInit();
+
+
 }
 
 
-void prvADCInit()
+void prvADCInit(TIM_HandleTypeDef *htim)
 {
+	/* Start RF receiving ADCs. Save data to adcX.rx_buf */
+	if ( HAL_ADC_Start_DMA( ADCI, (uint32_t *)adcI.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
+	{
+		Error_Handler(); //does nothing-> TODO: error handler
+	}
 
+    if ( HAL_ADC_Start_DMA( ADCQ, (uint32_t *)adcQ.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
+    {
+    	Error_Handler(); //does nothing-> TODO: error handler
+    }
+
+
+    /* Start MCU temperature reading ADC. Save data to adcT.rx_buf */
+    if ( HAL_ADC_Start_DMA( ADCT, (uint32_t *)adcT.temperature_buf, ADC_TEMPERATURE_BUF_SIZE ) != HAL_OK )
+    {
+    	Error_Handler(); //does nothing-> TODO: error handler
+    }
+
+
+    /* Start timer for the ADCs */
+    if ( HAL_TIM_Base_Start( TIM_1 ) != HAL_OK )		// TODO: Check if this is the right timer and right place to start it
+    {
+    	Error_Handler(); //does nothing-> TODO: error handler
+    }
 }
 
 

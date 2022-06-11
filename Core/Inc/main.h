@@ -81,13 +81,19 @@ void Error_Handler(void);
 extern SPI_HandleTypeDef hspi2;
 #define RXSPI (&hspi2)
 
-/* Extern the  */
+/* Extern the ADC hanle types for adc.c */
 extern ADC_HandleTypeDef hadc1;
 #define ADCI (&hadc1)			// ADC responsible for I data
 
-extern ADC_HandleTypeDef hadc3;
-#define ADCQ (&hadc3)			// ADC responsible for Q data
+extern ADC_HandleTypeDef hadc2;
+#define ADCQ (&hadc2)			// ADC responsible for Q data
 
+extern ADC_HandleTypeDef hadc3;
+#define ADCT (&hadc3)			// ADC responsible for MCU temperature data
+
+/* Extern the TIM handle types for adc.c */
+extern TIM_HandleTypeDef htim1;
+#define TIM_1 (&htim1)			// Underscore to differentiate it from the instance name defined in main.c
 
 
 
