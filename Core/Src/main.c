@@ -24,9 +24,7 @@
 #include "usb_device.h"
 #include "receiver.h"
 #include "debugRTT.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
+#include "bufferprinter.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -150,6 +148,12 @@ static void pvrInitBoard() {
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
+
+	//Arbitrary test array
+	uint32_t *testArr[] = {11, 22, 33, 44, 55};
+	printData(testArr, sizeof(testArr)/sizeof(uint32_t));
+	printf("Continuing.\n");
+
 }
 
 //A tick callback used to check SysTick functionality
