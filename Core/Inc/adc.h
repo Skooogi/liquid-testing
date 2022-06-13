@@ -17,7 +17,7 @@
 #define UINT16_OFFSET 				0x8000
 #define SHORT_MAX 					0x7FFF
 #define FFT_SIZE 					0x800
-#define SAMPLERATE 					312500		// TODO: This must change
+#define ADC_SAMPLERATE 				28800		// TODO: This must change
 #define DECIMATION_FACTOR 			3
 
 #define SNR_THRESHOLD_F32    		75.0f
@@ -38,11 +38,13 @@
 /****** Only for prerecorded test data END ******/
 
 
+/* Structs for storing the states of the RF receiving ADCs */
 typedef struct rfadc {
 
-	ALIGN_32BYTES (uint16_t  rx_buf[ADC_RX_BUF_SIZE]);
-	ALIGN_32BYTES (int16_t 	 data[ADC_RX_BUF_SIZE]);
-	ALIGN_32BYTES (int16_t 	 data_fir[ADC_RX_BUF_SIZE]);
+	uint8_t converting;										// Flag to tell whether the ADC is in the middle of conversions or not
+	ALIGN_32BYTES ( int16_t rx_buf[ADC_RX_BUF_SIZE] );
+	ALIGN_32BYTES ( int16_t data[ADC_RX_BUF_SIZE] );
+	ALIGN_32BYTES ( int16_t data_fir[ADC_RX_BUF_SIZE] );
 
 } *rfadc_t;
 
@@ -51,9 +53,11 @@ extern struct rfadc adcI;
 extern struct rfadc adcQ;
 
 
+/* Struct for storing the state of the MCU temperature measuring ADC */
 typedef struct tempadc {
 
-	ALIGN_32BYTES (uint16_t  temperature_buf[ADC_TEMPERATURE_BUF_SIZE]);	// TODO: Is the alignment necessary?
+	uint8_t converting;														// Flag to tell whether the ADC is in the middle of conversions or not
+	ALIGN_32BYTES (uint16_t temperature_buf[ADC_TEMPERATURE_BUF_SIZE]);		// TODO: Is the alignment necessary?
 
 } *tempadc_t;
 

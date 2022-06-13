@@ -43,6 +43,8 @@
 /* USER CODE BEGIN PTD */
 #define TERMINAL_PRIORITY 	(tskIDLE_PRIORITY + 1)
 #define BLINK_PRIORITY 		(tskIDLE_PRIORITY + 2)
+
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -117,6 +119,12 @@ static void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 
 
+int16_t swap_bytes(int16_t data){
+	data = data+UINT16_OFFSET;
+	return data;
+}
+
+
 static void prvBlinkLED( void *pvParameters ) {
 
 	/* Remove compiler warning about unused parameter. */
@@ -189,13 +197,13 @@ int main(void)
 	/************************************ FREE RTOS TEST END ************************************/
 
 	/* Task acquiring latest ADC data */
-	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
+	//xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
-	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+	//xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
 	/* Task handle data bus (CubeSat protocol) */
-	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+	//xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();

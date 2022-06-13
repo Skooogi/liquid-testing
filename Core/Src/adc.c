@@ -26,17 +26,17 @@ uint32_t prim;
 
 /* Instance of ADC data and state struct for ADCI (&hadc1) */
 struct rfadc adcI = {
-
+	.converting = 0
 };
 
 /* Instance of ADC data and state struct for ADCQ (&hadc2) */
 struct rfadc adcQ = {
-
+	.converting = 0
 };
 
 /* Instance of ADC data and state struct for ADCT (&hadc3) */
 struct tempadc adcT = {
-
+	.converting = 0
 };
 
 
@@ -52,6 +52,24 @@ void prvADCTask( void *pvParameters )
 
 void prvADCInit(TIM_HandleTypeDef *htim)
 {
+	/* Initialize the variables storing the states of the ADCs. */
+	/*
+	adcI.converting = 0;
+	adcQ.converting = 0;
+	adcT.converting = 0;
+	*/
+
+	memset( adcI.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	memset( adcI.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	memset( adcI.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+
+	memset( adcQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	memset( adcQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	memset( adcQ.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+
+	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint16_t) );
+
+
 	/* Start RF receiving ADCs. Save data to adcX.rx_buf */
 	if ( HAL_ADC_Start_DMA( ADCI, (uint32_t *)adcI.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
 	{
@@ -76,6 +94,7 @@ void prvADCInit(TIM_HandleTypeDef *htim)
     {
     	Error_Handler(); //does nothing-> TODO: error handler
     }
+
 }
 
 
