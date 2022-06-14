@@ -16,6 +16,9 @@
 
 typedef struct dsp {
 
+	uint8_t processing_request_flag;
+	uint8_t dbuf_false_processing_request_error;	// Error flag to signal if data processing has been requested without ready data (debugging)
+	uint32_t batch_sn;
 	complex complex_data;
 	complex prev_complex;
 	complex temp_complex;

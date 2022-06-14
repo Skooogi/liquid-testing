@@ -43,29 +43,17 @@
 /* USER CODE BEGIN PTD */
 #define TERMINAL_PRIORITY 	(tskIDLE_PRIORITY + 1)
 #define BLINK_PRIORITY 		(tskIDLE_PRIORITY + 2)
+#define DSP_PRIORITY		(tskIDLE_PRIORITY + 5)
+#define CSP_PRIORITY		(tskIDLE_PRIORITY + 10)
+#define ADC_PRIORITY		(tskIDLE_PRIORITY + 15)
 
 
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* Priorities at which the tasks are created. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
-#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 
 
-//Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
-#define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
-#define SECOND_BLINK_FREQUENCY 			( 1000 / portTICK_PERIOD_MS )
-
-/* The number of items the queue can hold.  This is 1 as the receive task
-will remove items as they are added, meaning the send task should always find
-the queue empty. */
-#define mainQUEUE_LENGTH					( 1 )
-
-/* The LED is used to show the demo status. (not connected on Rev A hardware) */
-//#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
-#define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
 /* USER CODE END PD */
 
 
@@ -197,13 +185,13 @@ int main(void)
 	/************************************ FREE RTOS TEST END ************************************/
 
 	/* Task acquiring latest ADC data */
-	//xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
+	//xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
-	//xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+	//xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  DSP_PRIORITY, NULL );
 
 	/* Task handle data bus (CubeSat protocol) */
-	//xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+	//xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  CSP_PRIORITY, NULL );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
