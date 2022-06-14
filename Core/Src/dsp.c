@@ -5,12 +5,12 @@
  *
  */
 
-#include "dsp.h"
-
 
 #include "dsp.h"
 #include "main.h"
-#include "adc.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "filter.h"
 
 
 struct dsp dsp = {
@@ -25,9 +25,8 @@ struct dsp dsp = {
 	.meanQ = 0,
 	.temp_I = 0,
 	.temp_Q = 0,
-	.downmix_freq = 0,							// TODO: Determine a correct value for this.
-	.num_blocks = ADC_RX_BUF_SIZE/BLOCK_SIZE/2,
-	.ifft_flag = 0,								// Regular FFT
+	.downmix_freq = 0,								// TODO: Determine a correct value for this.
+	.ifft_flag = 0,									// Regular FFT
 	.bit_reverse_flag = 1							// Reverse bits
 
 };
@@ -53,15 +52,10 @@ static void prvRemoveDC(int16_t *data, uint32_t data_length)
 }
 
 
-
-
-
 /* Demodulates GMSK modulated signal that has been downmixed
  * 	startflag 		= 	signal start in adcX.data
  * 	endflag 		= 	signal end in adcX.data
- * 	demodulated_IQ 	=	array for storing demodulated signal
- *
- */
+ * 	demodulated_IQ 	=	array for storing demodulated signal */
 void prvGMSKDemodulate(uint32_t startflag,  uint32_t endflag, int16_t *demodulated_IQ)
 {
 	for(uint32_t i = startflag; i < endflag; i++)
@@ -132,7 +126,28 @@ static void prvDSPPipeline()
 		}
 	}
 
-	// TODO: Continue to filtering
+	/* Lowpass filter both I and Q data */
+	for(uint32_t i=0; i < NUM_BLOCKS; i++)
+	{
+		arm_fir_q15(&(filters.fir1), adcI.data+i*BLOCK_SIZE, adcI.data_fir+i*BLOCK_SIZE, BLOCK_SIZE);
+	}
+	for(int i=0; i < NUM_BLOCKS; i++)
+	{
+		arm_fir_q15(&(filters.fir1), adcQ.data+i*BLOCK_SIZE, adcQ.data_fir+i*BLOCK_SIZE, BLOCK_SIZE);
+	}
+
+	/* Demodulate I and Q signals, save result to demodulated_IQ */
+	prvGMSKDemodulate(0, ADC_RX_BUF_SIZE, dsp.demodulated_IQ);
+
+	/* Filter the demodulated data with a 0.1 lowpass filter */
+	for(uint32_t i=0; i < NUM_BLOCKS; i++)
+	{
+		arm_fir_q15(&(filters.fir2), dsp.demodulated_IQ+i*BLOCK_SIZE, adcI.data+i*BLOCK_SIZE, BLOCK_SIZE);
+	}
+
+	dsp.demodulated_IQ[0]=0;
+
+	// TODO: Next, take log function. Then, decimate. Finally, send data to result buffer.
 
 
 }
@@ -147,6 +162,9 @@ void prvDSPTask( void *pvParameters )
 
 	for( ;; )
 	{
+		/* The ADCTask gives a notification when data requires processing. This task remains blocked until
+		 * a notification is received. Upon receiving the notification, clear the notification and start DSP. */
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 		if (!dsp.processing_request_flag)	// Check if processing is requested.
 		{

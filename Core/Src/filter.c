@@ -7,4 +7,7 @@
 
 #include "filter.h"
 
+/* Instance of struct containing filters for DSP */
+struct filter filters = { };
+
 

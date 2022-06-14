@@ -7,11 +7,18 @@
 #define CORE_INC_DSP_H_
 
 #include <stdint.h>
+#include "adc.h"
 #include "math.h"
 #include "complex.h"
-#include "adc.h"
 #include "arm_math.h"
 #include "arm_const_structs.h"
+#include "FreeRTOS.h"
+#include "task.h"
+
+#define BLOCK_SIZE         	64
+#define NUM_BLOCKS 			ADC_RX_BUF_SIZE/BLOCK_SIZE/2
+
+#define SNR_THRESHOLD_F32    		75.0f
 
 
 typedef struct dsp {
@@ -40,13 +47,6 @@ typedef struct dsp {
 	uint8_t	ifft_flag;					// Perform IFFT? (Regular FFT if 0)
 	uint8_t bit_reverse_flag;
 
-	uint32_t num_blocks;
-	float32_t snr;
-
-
-
-
-
 	uint32_t prim;
 
 	// TODO: Explain all variables. Decoder heavily depends on the filter implementation that can be found in filter.c and filter.h
@@ -55,6 +55,9 @@ typedef struct dsp {
 
 /* Declare the extern struct decoder. */
 extern struct dsp dsp;
+
+/* Declare DSP Task handle */
+extern TaskHandle_t DSPTaskHandle;
 
 
 /************* Publicly callable functions *************/

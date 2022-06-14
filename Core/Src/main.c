@@ -18,7 +18,6 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "adc.h"
 #include "dsp.h"
 #include "cubesat_protocol.h"
 #include "usb_device.h"
@@ -45,7 +44,8 @@
 #define BLINK_PRIORITY 		(tskIDLE_PRIORITY + 2)
 #define DSP_PRIORITY		(tskIDLE_PRIORITY + 5)
 #define CSP_PRIORITY		(tskIDLE_PRIORITY + 10)
-#define ADC_PRIORITY		(tskIDLE_PRIORITY + 15)
+
+#define DSP_STACK_SIZE		400;	// TODO: TBD
 
 
 /* USER CODE END PTD */
@@ -53,6 +53,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+/* Task handle declarations */
+TaskHandle_t ADCTaskHandle = NULL;
+TaskHandle_t DSPTaskHandle = NULL;
 
 /* USER CODE END PD */
 
@@ -184,14 +187,11 @@ int main(void)
 
 	/************************************ FREE RTOS TEST END ************************************/
 
-	/* Task acquiring latest ADC data */
-	//xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_PRIORITY, NULL);
-
 	/* Task taking care of digital signal processing */
-	//xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  DSP_PRIORITY, NULL );
+	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );
 
-	/* Task handle data bus (CubeSat protocol) */
-	//xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  CSP_PRIORITY, NULL );
+	/* Task handling data bus (CubeSat protocol) */
+	//xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  CSP_PRIORITY, &ADCTaskHandle );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();

@@ -6,14 +6,17 @@
  */
 
 #include "main.h"
-#include "adc.h"
 #include "dsp.h"
+#include "sdr.h"
 
 #include "math.h"
 #include "usbd_cdc_if.h"
 #include "complex.h"
 #include "arm_math.h"
 #include "arm_const_structs.h"
+
+
+
 
 //#include "../../Drivers/gnu-ais/callbacks.h"
 //#include "../../Drivers/gnu-ais/filter.h"
@@ -43,30 +46,14 @@ struct tempadc adcT = {
 };
 
 
-void prvADCTask( void *pvParameters )
-{
-	( void ) pvParameters;
-
-	prvADCInit();
-
-	// TODO: Implement!
-	for( ;; )
-	{
-
-	}
-
-
-}
-
-
 void prvADCInit(TIM_HandleTypeDef *htim)
 {
 	/* Initialize the variables storing the states of the ADCs. */
-	/*
+
 	adcI.converting = 0;
 	adcQ.converting = 0;
 	adcT.converting = 0;
-	*/
+
 
 	memset( adcI.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
 	memset( adcI.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
@@ -177,6 +164,7 @@ ADCQ_A_buf:
 			if ( (adcI.A_full && adcQ.A_full) || (adcI.B_full && adcQ.B_full))
 			{
 				dsp.processing_request_flag = 1;
+				xTaskNotifyGive( DSPTaskHandle );		// Notify the DSP Task that there are data in need of processing
 			}
 			return;
 		}
@@ -208,8 +196,7 @@ ADCQ_B_buf:
 			goto ADCQ_A_buf;
 		}
 	}
-	// TODO: Can be removed once no longer needed.
-	/* The code should end up here only if both a and b buffers are full of unprocessed
+	/* The code should end up here only if both A and B buffers are full of unprocessed
 	 * data when new data is received from the ADC. Raise error flag for debugging purposes. */
 	adcI.dbuf_overrun_error = 1;
 }
