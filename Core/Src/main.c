@@ -181,6 +181,7 @@ int main(void)
 	//Starts debug terminal.
 	xTaskCreate( prvDebugRTT, "RTT", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
+	xTaskCreate( prvCSPTask, "CSP", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
 	//Blinks the LED
 	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
@@ -189,13 +190,13 @@ int main(void)
 	/************************************ FREE RTOS TEST END ************************************/
 
 	/* Task acquiring latest ADC data */
-	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
+//	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
-	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+//	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
 	/* Task handle data bus (CubeSat protocol) */
-	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+//	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
