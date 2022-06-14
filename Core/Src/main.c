@@ -46,27 +46,6 @@
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* Priorities at which the tasks are created. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
-#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
-
-
-//Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
-#define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
-#define SECOND_BLINK_FREQUENCY 			( 1000 / portTICK_PERIOD_MS )
-
-/* The number of items the queue can hold.  This is 1 as the receive task
-will remove items as they are added, meaning the send task should always find
-the queue empty. */
-#define mainQUEUE_LENGTH					( 1 )
-
-/* The LED is used to show the demo status. (not connected on Rev A hardware) */
-//#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
-#define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
-/* USER CODE END PD */
-
-
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
@@ -170,41 +149,28 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-
-
-	/******************************************* FREERTOS TEST BEGIN *******************************************/
-	
 	pvrInitBoard();
-
-		/************************************ FREE RTOS TEST BEGIN ************************************/
 
 	//Starts debug terminal.
 	xTaskCreate( prvDebugRTT, "RTT", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
-
 	//Blinks the LED
 	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
-
-	/************************************ FREE RTOS TEST END ************************************/
-
 	/* Task acquiring latest ADC data */
-	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
+//	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
-	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+//	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
 	/* Task handle data bus (CubeSat protocol) */
-	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+//	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
 
 
 	for( ;; );
-
-	/******************************************** FREERTOS TEST END *******************************************/
-
 
 
   /* USER CODE END 1 */
