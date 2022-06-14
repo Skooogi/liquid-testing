@@ -20,7 +20,16 @@
 #define CSP_MAX_DELAY CSP_MAX_TIMEOUT
 #define CSP_INFINITY CSP_MAX_TIMEOUT
 
-
+//Need to be renamed
+#define htobe16(x) __bswap16(x)
+#define be16toh(x) __bswap16(x)
+#define betoh16(x) __bswap16(x)
+#define htobe32(x) __bswap32(x)
+#define be32toh(x) __bswap32(x)
+#define betoh32(x) __bswap32(x)
+#define htobe64(x) __bswap64(x)
+#define be64toh(x) __bswap64(x)
+#define betoh64(x) __bswap64(x)
 
 
 enum csp_dedup_types {
