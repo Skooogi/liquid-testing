@@ -25,15 +25,6 @@
 #define DECIMATION_FACTOR 			3
 
 
-#if defined(ARM_MATH_MVEF) && !defined(ARM_MATH_AUTOVECTORIZE)
-/* Must be a multiple of 16 */
-#define NUM_TAPS_ARRAY_SIZE   		32
-#else
-#define NUM_TAPS_ARRAY_SIZE   		61
-#endif
-
-#define NUM_TAPS         			60
-
 
 /****** Only for prerecorded test data START ******/
 #define TEST_LENGTH_SAMPLES ((uint32_t) 2048)

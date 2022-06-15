@@ -49,6 +49,8 @@ typedef struct dsp {
 
 	uint32_t prim;
 
+	int16_t processed_data[ADC_RX_BUF_SIZE];
+
 	// TODO: Explain all variables. Decoder heavily depends on the filter implementation that can be found in filter.c and filter.h
 
 } *dsp_t;

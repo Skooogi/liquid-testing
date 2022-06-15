@@ -11,6 +11,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "filter.h"
+#include <math.h>
 
 
 struct dsp dsp = {
@@ -142,13 +143,25 @@ static void prvDSPPipeline()
 	/* Filter the demodulated data with a 0.1 lowpass filter */
 	for(uint32_t i=0; i < NUM_BLOCKS; i++)
 	{
-		arm_fir_q15(&(filters.fir2), dsp.demodulated_IQ+i*BLOCK_SIZE, adcI.data+i*BLOCK_SIZE, BLOCK_SIZE);
+		arm_fir_q15(&(filters.fir2), dsp.demodulated_IQ+i*BLOCK_SIZE, dsp.processed_data+i*BLOCK_SIZE, BLOCK_SIZE);
 	}
 
-	dsp.demodulated_IQ[0]=0;
 
-	// TODO: Next, take log function. Then, decimate. Finally, send data to result buffer.
 
+	/* Take log to help data decimation. */
+	for(int i = 0; i<ADC_RX_BUF_SIZE; i++)
+	{
+		if( dsp.processed_data[i] < 0 )
+		{
+			dsp.processed_data[i] = -1*log( abs(dsp.processed_data[i]) - 1 );
+		}
+		else
+		{
+			dsp.processed_data[i] = log( abs(dsp.processed_data[i]) - 1 );
+		}
+	}
+
+	// TODO: Decimate, digitize, convert.
 
 }
 
