@@ -23,9 +23,6 @@
 #include "usb_device.h"
 #include "receiver.h"
 #include "debugRTT.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include <string.h>
 
@@ -146,9 +143,11 @@ static void pvrInitBoard() {
 	MX_ADC2_Init();
 	MX_USB_DEVICE_Init();
 	MX_TIM1_Init();
+	SEGGER_RTT_Init();
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
+
 }
 
 //A tick callback used to check SysTick functionality
