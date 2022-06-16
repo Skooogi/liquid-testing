@@ -20,7 +20,8 @@
 
 #define AIS_PACKAGE_MAX_LENGHT			256								// bits
 #define AIS_PREAMBLE_LENGTH				24								// bits
-#define AIS_START_OR_END_FLAG_LENGTH	8								// bits
+#define AIS_START_END_FLAG_LENGTH			8								// bits
+#define AIS_MAX_PAYLOAD_LENGTH			168								// bits
 
 #define SNR_THRESHOLD_F32    			75.0f
 
@@ -30,12 +31,7 @@ typedef struct dsp {
 	uint8_t processing_request_flag;
 	uint8_t dbuf_false_processing_request_error;	// Error flag to signal if data processing has been requested without ready data (debugging)
 	uint32_t batch_sn;
-	complex complex_data;
-	complex prev_complex;
-	complex temp_complex;
 	int16_t demodulated_IQ[ADC_RX_BUF_SIZE];
-	float64_t temp_I;
-	float64_t temp_Q;
 	int32_t downmix_freq;
 
 	q31_t fft_max_mag;
@@ -54,7 +50,13 @@ typedef struct dsp {
 	int16_t processed_data[ADC_RX_BUF_SIZE];
 	int16_t decimated_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR];
 	uint8_t digitized_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR];
-	uint8_t	final_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR/8]
+
+	//uint8_t stuffed_payload[AIS_MAX_PAYLOAD_LENGTH];
+	uint32_t stuffed_payload_length;
+	uint8_t unstuffed_payload[AIS_MAX_PAYLOAD_LENGTH];
+	uint32_t unstuffed_payload_length;
+
+	uint8_t	decoded_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR/6];
 
 	// TODO: Explain all variables. Decoder heavily depends on the filter implementation that can be found in filter.c and filter.h
 

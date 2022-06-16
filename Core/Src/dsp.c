@@ -5,7 +5,6 @@
  *
  */
 
-
 #include "dsp.h"
 #include "main.h"
 #include "FreeRTOS.h"
@@ -19,11 +18,6 @@ struct dsp dsp = {
 	.processing_request_flag = 0,
 	.dbuf_false_processing_request_error = 0,
 	.batch_sn = 0,
-	.prev_complex = 0,
-	.complex_data = 0,
-	.temp_complex = 0,
-	.temp_I = 0,
-	.temp_Q = 0,
 	.downmix_freq = 0,								// TODO: Determine a correct value for this.
 	.ifft_flag = 0,									// Regular FFT
 	.bit_reverse_flag = 1,							// Reverse bits
@@ -57,15 +51,22 @@ static void prvSubtractMean(int16_t *data, uint32_t data_length)
  * 	demodulated_IQ 	=	array for storing demodulated signal */
 void prvGMSKDemodulate(uint32_t startflag,  uint32_t endflag, int16_t *demodulated_IQ)
 {
+	/* Temporary assisting variables */
+	float64_t temp_I;
+	float64_t temp_Q;
+	complex complex_data;
+	complex prev_complex_data;
+	complex temp_complex_data;
+	/* Demodulation */
 	for(uint32_t i = startflag; i < endflag; i++)
 	{
-		dsp.temp_I = -(float64_t)(adcI.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
-		dsp.temp_Q = -(float64_t)(adcQ.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
+		temp_I = -(float64_t)(adcI.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
+		temp_Q = -(float64_t)(adcQ.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
 
-		dsp.complex_data = (dsp.temp_I + (dsp.temp_Q * _Complex_I));
-		dsp.temp_complex = dsp.complex_data * conj(dsp.prev_complex); 		// Polar discriminator
-		demodulated_IQ[i-startflag] = (int16_t)(SHORT_MAX * (atan2(cimag(dsp.temp_complex), creal(dsp.temp_complex)) / M_PI));
-		dsp.prev_complex = dsp.complex_data;
+		complex_data = (temp_I + (temp_Q * _Complex_I));
+		temp_complex_data = complex_data * conj(prev_complex_data); 		// Polar discriminator
+		demodulated_IQ[i-startflag] = (int16_t)(SHORT_MAX * (atan2(cimag(temp_complex_data), creal(temp_complex_data)) / M_PI));
+		prev_complex_data = complex_data;
 	}
 }
 
@@ -94,18 +95,17 @@ static uint32_t prvDetectPreamble(uint8_t *data)
 	{
 		preamble_found = 0;
 	}
-
 	return preamble_found;
-
 }
 
-/*  */
+
+/* Detect AIS message start or end flag */
 static uint32_t prvDetectStartOrEndFlag(uint8_t *data)
 {
 	uint32_t flag_found = 1;
 	uint32_t i;
 
-	for ( i=1; i<AIS_START_OR_END_FLAG_LENGTH-1; i++ )		// Must check the last bit separately as it should be different
+	for ( i=1; i<AIS_START_END_FLAG_LENGTH-1; i++ )		// Must check the last bit separately as it should be different
 	{
 		if ( data[i] == data[i-1] )
 		{
@@ -122,6 +122,35 @@ static uint32_t prvDetectStartOrEndFlag(uint8_t *data)
 		flag_found = 0;
 	}
 	return flag_found;
+}
+
+
+/* Destuff AIS message payload */
+static void prvPayloadDestuff(uint8_t *digitized_data, uint32_t payload_start_idx)
+{
+	uint32_t consecutive_ones = 0;		// Count how many consecutive ones have been encountered in the data
+	uint32_t num_removed_bits = 0;		// How many bits have been removed (destuffed)
+	uint32_t unstuffed_idx = 0;			// Current index of the unstuffed data buffer
+	for ( uint32_t i=payload_start_idx; i < payload_start_idx + dsp.stuffed_payload_length; i++ )
+	{
+		if ( dsp.digitized_data[i] == 1 )
+		{
+			consecutive_ones++;
+			if (consecutive_ones > 4)
+			{
+				i++;					// Skip the stuffing 0
+				num_removed_bits++;		// Increment the removed bits counter
+				consecutive_ones = 0;	// Reset the counter of consecutive ones
+			}
+		}
+		else
+		{
+			consecutive_ones = 0;
+		}
+		dsp.unstuffed_payload[unstuffed_idx] = dsp.digitized_data[i];
+		unstuffed_idx++;
+	}
+	dsp.unstuffed_payload_length = dsp.stuffed_payload_length - num_removed_bits;
 }
 
 
@@ -213,54 +242,60 @@ static void prvDSPPipeline()
 	}
 
 	/* Decimate the data */
-	for(int i = 0; i<ADC_RX_BUF_SIZE; i+=DECIMATION_FACTOR){
-		  dsp.decimated_data[i] = dsp.processed_data[i];
+	for(uint32_t i = 0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++)
+	{
+		  dsp.decimated_data[i] = dsp.processed_data[i*DECIMATION_FACTOR];
 	}
 
 	/* Digitize the data */
-	prvSubtractMean(dsp.decimated_data, ADC_RX_BUF_SIZE/DECIMATION_FACTOR);	// Subtract the mean from the data.
+	prvSubtractMean(dsp.decimated_data, ADC_RX_BUF_SIZE/DECIMATION_FACTOR);		// Subtract the mean from the data.
 	for (uint32_t i=0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++)
 	{
-		if (dsp.decimated_data[i] >= 0)		// "Bit" is 1 if datapoint >= 0.
+		if (dsp.decimated_data[i] >= 0)											// "Bit" is 1 if datapoint >= 0.
 		{
 			dsp.digitized_data[i] = 1;
 		}
-		else								// "Bit" is 0 if datapoint < 0.
+		else																	// "Bit" is 0 if datapoint < 0.
 		{
 			dsp.digitized_data[i] = 0;
 		}
 	}
 
-	/* Look for preamble and start flag. */
+	/* Look for preamble, start flag, and end flag. Determine payload length and destuff payload data. */
 	for (uint32_t i=0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR - AIS_PACKAGE_MAX_LENGHT; i++)
 	{
 		/* If true, then preamble found */
 		if ( prvDetectPreamble(dsp.digitized_data + i) )
 		{
 			/* If true, then start flag found */
-			if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_START_OR_END_FLAG_LENGTH) )
+			if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_PREAMBLE_LENGTH) )
 			{
-
+				/*  */
+				for ( dsp.stuffed_payload_length=0; dsp.stuffed_payload_length<=AIS_MAX_PAYLOAD_LENGTH; dsp.stuffed_payload_length++ )
+				{
+					/* If true, end flag detected, stop counting */
+					if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH) )
+					{
+						break;
+					}
+				}
+				prvPayloadDestuff(dsp.digitized_data, i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH);
 			}
-
 		}
-
 	}
-
 
 	/* Convert digitized data from array of "bits" to bytes */
-	/*
 	uint8_t byte = 0;
-	uint32_t j;
-	for ( uint32_t i=0; i < ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++ ) {
-		for( j = 0; j < 8; ++j )
+	uint8_t j;
+	for ( uint32_t i=0; i < AIS_MAX_PAYLOAD_LENGTH; i+=6 )
+	{
+		for( j = i; j < i+6; ++j )								// Characters in AIS payload are 6 bits long
 		{
-			if( dsp.digitized_data[j] == 1 ) byte |= 1 << (7-j);
+			if( dsp.unstuffed_payload[j] == 1 ) byte |= 1 << (7-j);
 		}
-		dsp.final_data[j] = byte;
+		dsp.decoded_data[j] = byte;
 		byte = 0;
 	}
-	*/
 
 	// TODO: Buffer sizes so that they are compatible with decimation and still amount to integers and important data is not lost. Maybe datarate?
 
