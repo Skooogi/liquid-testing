@@ -238,7 +238,7 @@ static void prvDSPPipeline()
 		if ( prvDetectPreamble(dsp.digitized_data + i) )
 		{
 			/* If true, then start flag found */
-			if ( prvDetectStartOrEndFlag(dsp.digitized_data + i) )
+			if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_START_OR_END_FLAG_LENGTH) )
 			{
 
 			}
