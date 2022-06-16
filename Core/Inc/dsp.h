@@ -15,10 +15,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#define BLOCK_SIZE         	64
-#define NUM_BLOCKS 			ADC_RX_BUF_SIZE/BLOCK_SIZE/2
+#define BLOCK_SIZE         				64
+#define NUM_BLOCKS 						ADC_RX_BUF_SIZE/BLOCK_SIZE/2
 
-#define SNR_THRESHOLD_F32    		75.0f
+#define AIS_PACKAGE_MAX_LENGHT			256								// bits
+#define AIS_PREAMBLE_LENGTH				24								// bits
+#define AIS_START_OR_END_FLAG_LENGTH	8								// bits
+
+#define SNR_THRESHOLD_F32    			75.0f
 
 
 typedef struct dsp {
@@ -29,8 +33,6 @@ typedef struct dsp {
 	complex complex_data;
 	complex prev_complex;
 	complex temp_complex;
-	int16_t meanI;
-	int16_t meanQ;
 	int16_t demodulated_IQ[ADC_RX_BUF_SIZE];
 	float64_t temp_I;
 	float64_t temp_Q;
@@ -50,6 +52,9 @@ typedef struct dsp {
 	uint32_t prim;
 
 	int16_t processed_data[ADC_RX_BUF_SIZE];
+	int16_t decimated_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR];
+	uint8_t digitized_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR];
+	uint8_t	final_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR/8]
 
 	// TODO: Explain all variables. Decoder heavily depends on the filter implementation that can be found in filter.c and filter.h
 

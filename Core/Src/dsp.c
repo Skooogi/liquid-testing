@@ -22,13 +22,11 @@ struct dsp dsp = {
 	.prev_complex = 0,
 	.complex_data = 0,
 	.temp_complex = 0,
-	.meanI = 0,
-	.meanQ = 0,
 	.temp_I = 0,
 	.temp_Q = 0,
 	.downmix_freq = 0,								// TODO: Determine a correct value for this.
 	.ifft_flag = 0,									// Regular FFT
-	.bit_reverse_flag = 1							// Reverse bits
+	.bit_reverse_flag = 1,							// Reverse bits
 
 };
 
@@ -41,7 +39,7 @@ void prvDSPInit()
 
 
 /* Function to remove the mean value of the elements of an array from each of its elements */
-static void prvRemoveDC(int16_t *data, uint32_t data_length)
+static void prvSubtractMean(int16_t *data, uint32_t data_length)
 {
 	q15_t mean;
 	arm_mean_q15( data, ADC_RX_BUF_SIZE, &mean );
@@ -72,13 +70,68 @@ void prvGMSKDemodulate(uint32_t startflag,  uint32_t endflag, int16_t *demodulat
 }
 
 
+/* Detect AIS message preamble */
+static uint32_t prvDetectPreamble(uint8_t *data)
+{
+	uint32_t preamble_found = 1;
+
+	if ( data[0] == data[1] )										// Check if first "bits" are equal
+	{
+		for ( uint32_t i=2; i<AIS_PREAMBLE_LENGTH; i+=2 )
+		{
+			if ( data[i] != data[i-2] && data[i] == data[i+1] )	// Check that the current "bit" is equal to the next but different from the (two) previous
+			{
+				continue;
+			}
+			else												// The "bits" did not represent a preamble, break out of loop and return 0.
+			{
+				preamble_found = 0;
+				break;
+			}
+		}
+	}
+	else
+	{
+		preamble_found = 0;
+	}
+
+	return preamble_found;
+
+}
+
+/*  */
+static uint32_t prvDetectStartOrEndFlag(uint8_t *data)
+{
+	uint32_t flag_found = 1;
+	uint32_t i;
+
+	for ( i=1; i<AIS_START_OR_END_FLAG_LENGTH-1; i++ )		// Must check the last bit separately as it should be different
+	{
+		if ( data[i] == data[i-1] )
+		{
+			continue;
+		}
+		else
+		{
+			flag_found = 0;
+			return flag_found;
+		}
+	}
+	if ( data[i] == data[i-1] )
+	{
+		flag_found = 0;
+	}
+	return flag_found;
+}
+
+
 /* Function taking care of the complete DSP pipeline from raw data to a decoded signal */
 static void prvDSPPipeline()
 {
 
 	/* Remove DC spike from the data. */
-	prvRemoveDC( adcI.data, ADC_RX_BUF_SIZE );
-	prvRemoveDC( adcQ.data, ADC_RX_BUF_SIZE );
+	prvSubtractMean( adcI.data, ADC_RX_BUF_SIZE );
+	prvSubtractMean( adcQ.data, ADC_RX_BUF_SIZE );
 
 	/* Save data to fft_buf, use 32 bit values shifted left 16 bits because that helps. */
 	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i+=FFT_SIZE*2)
@@ -146,8 +199,6 @@ static void prvDSPPipeline()
 		arm_fir_q15(&(filters.fir2), dsp.demodulated_IQ+i*BLOCK_SIZE, dsp.processed_data+i*BLOCK_SIZE, BLOCK_SIZE);
 	}
 
-
-
 	/* Take log to help data decimation. */
 	for(int i = 0; i<ADC_RX_BUF_SIZE; i++)
 	{
@@ -161,7 +212,61 @@ static void prvDSPPipeline()
 		}
 	}
 
-	// TODO: Decimate, digitize, convert.
+	/* Decimate the data */
+	for(int i = 0; i<ADC_RX_BUF_SIZE; i+=DECIMATION_FACTOR){
+		  dsp.decimated_data[i] = dsp.processed_data[i];
+	}
+
+	/* Digitize the data */
+	prvSubtractMean(dsp.decimated_data, ADC_RX_BUF_SIZE/DECIMATION_FACTOR);	// Subtract the mean from the data.
+	for (uint32_t i=0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++)
+	{
+		if (dsp.decimated_data[i] >= 0)		// "Bit" is 1 if datapoint >= 0.
+		{
+			dsp.digitized_data[i] = 1;
+		}
+		else								// "Bit" is 0 if datapoint < 0.
+		{
+			dsp.digitized_data[i] = 0;
+		}
+	}
+
+	/* Look for preamble and start flag. */
+	for (uint32_t i=0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR - AIS_PACKAGE_MAX_LENGHT; i++)
+	{
+		/* If true, then preamble found */
+		if ( prvDetectPreamble(dsp.digitized_data + i) )
+		{
+			/* If true, then start flag found */
+			if ( prvDetectStartOrEndFlag(dsp.digitized_data + i) )
+			{
+
+			}
+
+		}
+
+	}
+
+
+	/* Convert digitized data from array of "bits" to bytes */
+	/*
+	uint8_t byte = 0;
+	uint32_t j;
+	for ( uint32_t i=0; i < ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++ ) {
+		for( j = 0; j < 8; ++j )
+		{
+			if( dsp.digitized_data[j] == 1 ) byte |= 1 << (7-j);
+		}
+		dsp.final_data[j] = byte;
+		byte = 0;
+	}
+	*/
+
+	// TODO: Buffer sizes so that they are compatible with decimation and still amount to integers and important data is not lost. Maybe datarate?
+
+	// TODO: Start flag detection and AIS message extraction.
+
+	// TODO: Push data to result buffer.
 
 }
 
