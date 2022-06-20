@@ -51,7 +51,7 @@ while True:
 
     # User input 'n' closes RTT session and stops execution of script
     if user == 'n':
-        jlink.rtt_stop()
+        # jlink.rtt_stop()
         print("Stopping execution.")
         exit()
 

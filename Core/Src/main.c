@@ -125,11 +125,15 @@ static void prvBlinkLED( void *pvParameters ) {
 
 	int16_t allocArray[10000];							// Allocate memory for RTT buffer
 	array2RTTbuffer(allocArray, sizeof(allocArray));	// Configure RTT up-buffer '1'='DataOut'
+	vTaskDelay(200);
 
-
-
+	int16_t testArr[10000];
+	for (int k = 0; k<10000; k++){
+		testArr[k] = savedIdata[k];
+	}
 	// Arbitrary test data array
-	int16_t testArr[] = {
+	/*
+	int16_t testArr[10000] = {
 			savedIdata[0],
 			savedIdata[1],
 			savedIdata[2],
@@ -141,9 +145,10 @@ static void prvBlinkLED( void *pvParameters ) {
 			savedIdata[8],
 			savedIdata[9]
 	};
+	*/
 	SEGGER_RTT_Write(1, &testArr[0], sizeof(testArr));	// Write the data to RTT up-buffer '1'
-	int16_t testArr2[] = {11, 22, 400, 20000, 32767};	// Repeat with different data values
-	SEGGER_RTT_Write(1, &testArr2[0], sizeof(testArr2));
+	//int16_t testArr2[] = {11, 22, 400, 20000, 32767};	// Repeat with different data values
+	//SEGGER_RTT_Write(1, &testArr2[0], sizeof(testArr2));
 
 	for( ;; )
 	{
