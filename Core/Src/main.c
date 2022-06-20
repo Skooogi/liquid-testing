@@ -17,12 +17,14 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 #include "dsp.h"
 #include "cubesat_protocol.h"
 #include "usb_device.h"
 #include "receiver.h"
 #include "debugRTT.h"
+#include "saved_signal.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -117,9 +119,38 @@ static void prvBlinkLED( void *pvParameters ) {
 
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
+
+	/// DEBUG TESTING ZONE
+
+
+	int16_t allocArray[10000];							// Allocate memory for RTT buffer
+	array2RTTbuffer(allocArray, sizeof(allocArray));	// Configure RTT up-buffer '1'='DataOut'
+
+
+
+	// Arbitrary test data array
+	int16_t testArr[] = {
+			savedIdata[0],
+			savedIdata[1],
+			savedIdata[2],
+			savedIdata[3],
+			savedIdata[4],
+			savedIdata[5],
+			savedIdata[6],
+			savedIdata[7],
+			savedIdata[8],
+			savedIdata[9]
+	};
+	SEGGER_RTT_Write(1, &testArr[0], sizeof(testArr));	// Write the data to RTT up-buffer '1'
+	int16_t testArr2[] = {11, 22, 400, 20000, 32767};	// Repeat with different data values
+	SEGGER_RTT_Write(1, &testArr2[0], sizeof(testArr2));
+
 	for( ;; )
 	{
 		pulseLED(500,250);
+
+
+
 	}
 }
 
@@ -181,7 +212,7 @@ int main(void)
 
 
 	//Blinks the LED
-	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
+	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE *((uint16_t)10), NULL, BLINK_PRIORITY, NULL );
 
 
 	/************************************ FREE RTOS TEST END ************************************/
