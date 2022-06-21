@@ -23,6 +23,7 @@
 #include "usb_device.h"
 #include "receiver.h"
 #include "debugRTT.h"
+#include "dsp_testing.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -40,6 +41,7 @@
 #define TERMINAL_PRIORITY 	(tskIDLE_PRIORITY + 1)
 #define BLINK_PRIORITY 		(tskIDLE_PRIORITY + 2)
 #define DSP_PRIORITY		(tskIDLE_PRIORITY + 5)
+#define DSP_TEST_PRIORITY	(tskIDLE_PRIORITY + 6)
 #define CSP_PRIORITY		(tskIDLE_PRIORITY + 10)
 
 #define DSP_STACK_SIZE		400;	// TODO: TBD
@@ -182,6 +184,9 @@ int main(void)
 
 	//Blinks the LED
 	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
+
+	//Moves test data in between PC (python) & µC over RTT buffers
+	xTaskCreate( prvBlinkLED, "DSPtest", configMINIMAL_STACK_SIZE, NULL, DSP_TEST_PRIORITY, NULL );
 
 
 	/************************************ FREE RTOS TEST END ************************************/
