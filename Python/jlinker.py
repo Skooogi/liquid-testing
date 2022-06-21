@@ -99,7 +99,7 @@ while True:
         plt.plot(samples, data, '.k')
         plt.xlabel("sample")
         plt.ylabel("RTT Data [unit]")
-        plt.title(f"Num. of bytes read from RTT: {len(data)}")
+        plt.title(f"Num. of integers read from RTT: {len(data)}")
         plt.show()
 
     # Restart loop for reading data!

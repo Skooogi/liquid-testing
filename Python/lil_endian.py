@@ -6,6 +6,7 @@
 import numpy as np
 import pandas
 
+
 #
 # Function and example for parsing bytes read by JLink RTT (-Topi)
 #   - rtt_bytes     =  bytes read by jlink.rtt_read(..) in separate script
@@ -18,7 +19,6 @@ def byte_parser(rtt_bytes: list[int], bytes_per_int: int, do_prints: bool) -> li
     # create a new list to be overridden with data
     data = list(np.zeros(int(len(rtt_bytes) / bytes_per_int)))
 
-    #
     for i in range(0, len(data)):
         index = i * bytes_per_int
         data[i] = int.from_bytes(rtt_bytes[index:index + bytes_per_int], byteorder='little', signed=False)
@@ -76,3 +76,25 @@ def csv_reader(filename: str):
         data[k] = d
 
     return samples, data
+
+
+#
+#   Reads a saved test signal from .txt files (file only contains data points)
+#
+def txt_reader(filename: str):
+    # open file and read each line into array
+    file1 = open(filename, "r")
+    lines = file1.readlines()
+    # Number of data points
+    n_data = len(lines)
+    # Take only measurement rtt_bytes
+    data_lines = lines[1:n_data+1]
+    # Prepare a zeros array for rtt_bytes
+    data = np.zeros(n_data)
+
+    # Read actual rtt_bytes from the data_lines into 'rtt_bytes' array
+    for i in range(0, n_data):
+        data[i] = int(lines[i])
+
+    return data
+
