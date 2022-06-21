@@ -17,6 +17,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+
 #include "main.h"
 #include "dsp.h"
 #include "cubesat_protocol.h"
@@ -24,6 +25,7 @@
 #include "receiver.h"
 #include "debugRTT.h"
 #include "dsp_testing.h"
+#include "saved_signal.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -122,6 +124,7 @@ static void prvBlinkLED( void *pvParameters ) {
 	for( ;; )
 	{
 		pulseLED(500,250);
+
 	}
 }
 
@@ -183,7 +186,7 @@ int main(void)
 
 
 	//Blinks the LED
-	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
+	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE *((uint16_t)10), NULL, BLINK_PRIORITY, NULL );
 
 	//Moves test data in between PC (python) & µC over RTT buffers
 	xTaskCreate( prvBlinkLED, "DSPtest", configMINIMAL_STACK_SIZE, NULL, DSP_TEST_PRIORITY, NULL );

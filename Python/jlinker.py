@@ -48,16 +48,15 @@ print(f"RTT satus: {jlink.rtt_get_status()}")       # intended typo
 # Loop for reading the data from RTT up-buffer '1'
 while True:
     user = input("READ RTT buffer readings? a(all) or x(int) or n(exit): ")
-
+    data = []
     # User input 'n' closes RTT session and stops execution of script
     if user == 'n':
-        jlink.rtt_stop()
+        # jlink.rtt_stop()
         print("Stopping execution.")
         exit()
 
     # User input 'a' reads all data from RTT buffer
     elif user == 'a':
-        data = []
         readings_per_loop = 10
         total_data = 0
         # Reads the RTT buffer in batches of 10 readings per loop until buffer is empty
