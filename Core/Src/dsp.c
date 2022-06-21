@@ -10,6 +10,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "filter.h"
+#include "liquid.h"
 #include <math.h>
 
 
@@ -45,7 +46,7 @@ static void prvSubtractMean(int16_t *data, uint32_t data_length)
 }
 
 
-/* Demodulates GMSK modulated signal that has been downmixed
+/* Demodulates GMSK modulated signal that has been downmixed      (quadrature fm demodulation)
  * 	startflag 		= 	signal start in adcX.data
  * 	endflag 		= 	signal end in adcX.data
  * 	demodulated_IQ 	=	array for storing demodulated signal */
@@ -154,6 +155,24 @@ static void prvPayloadDestuff(uint8_t *digitized_data, uint32_t payload_start_id
 }
 
 
+/* Take an array of 1s and 0s and convert it to actual binary bytes of data */
+static void prvBitArrayToBinary()
+{
+	/* Convert digitized data from array of "bits" to bytes */
+	uint8_t byte = 0;
+	uint8_t j;
+	for ( uint32_t i=0; i < AIS_MAX_PAYLOAD_LENGTH; i+=6 )
+	{
+		for( j = i; j < i+6; ++j )								// Characters in AIS payload are 6 bits long
+		{
+			if( dsp.unstuffed_payload[j] == 1 ) byte |= 1 << (7-j);
+		}
+		dsp.decoded_data[j] = byte;
+		byte = 0;
+	}
+}
+
+
 /* Function taking care of the complete DSP pipeline from raw data to a decoded signal */
 static void prvDSPPipeline()
 {
@@ -165,7 +184,7 @@ static void prvDSPPipeline()
 	/* Save data to fft_buf, use 32 bit values shifted left 16 bits because that helps. */
 	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i+=FFT_SIZE*2)
 	{
-		for(uint16_t j=0; j < FFT_SIZE*2; j+=2)
+		for(uint16_t j=0; j < FFT_SIZE*2; j+=2)		// Interleaving
 		{
 			dsp.fft_buf[j] = (adcI.data[i+j]<<16);
 			dsp.fft_buf[j+1] = (adcQ.data[i+j+1]<<16);
@@ -203,9 +222,10 @@ static void prvDSPPipeline()
 		for(uint16_t i = 0; i<ADC_RX_BUF_SIZE; i++)
 		{
 			  dsp.radians = 2 * M_PI * i * dsp.mix_freq / ((float32_t)ADC_SAMPLERATE);
+			  // TODO: cosine for I data
 			  dsp.sine_value = arm_sin_f32(dsp.radians); 								// Move to positive values only TODO: What does this comment mean?
-			  adcI.data[i] =(adcI.data[i])*dsp.sine_value;
-			  adcQ.data[i] =(adcQ.data[i])*dsp.sine_value;
+			  adcI.data[i] =(adcI.data[i])*dsp.sine_value;	// TODO: float
+			  adcQ.data[i] =(adcQ.data[i])*dsp.sine_value;	// TODO: float
 		}
 	}
 
@@ -222,24 +242,14 @@ static void prvDSPPipeline()
 	/* Demodulate I and Q signals, save result to demodulated_IQ */
 	prvGMSKDemodulate(0, ADC_RX_BUF_SIZE, dsp.demodulated_IQ);
 
+	/* TODO: Implement clock recovery Müller Müller */
+
 	/* Filter the demodulated data with a 0.1 lowpass filter */
 	for(uint32_t i=0; i < NUM_BLOCKS; i++)
 	{
 		arm_fir_q15(&(filters.fir2), dsp.demodulated_IQ+i*BLOCK_SIZE, dsp.processed_data+i*BLOCK_SIZE, BLOCK_SIZE);
 	}
 
-	/* Take log to help data decimation. */
-	for(int i = 0; i<ADC_RX_BUF_SIZE; i++)
-	{
-		if( dsp.processed_data[i] < 0 )
-		{
-			dsp.processed_data[i] = -1*log( abs(dsp.processed_data[i]) - 1 );
-		}
-		else
-		{
-			dsp.processed_data[i] = log( abs(dsp.processed_data[i]) - 1 );
-		}
-	}
 
 	/* Decimate the data */
 	for(uint32_t i = 0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++)
@@ -282,19 +292,6 @@ static void prvDSPPipeline()
 				prvPayloadDestuff(dsp.digitized_data, i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH);
 			}
 		}
-	}
-
-	/* Convert digitized data from array of "bits" to bytes */
-	uint8_t byte = 0;
-	uint8_t j;
-	for ( uint32_t i=0; i < AIS_MAX_PAYLOAD_LENGTH; i+=6 )
-	{
-		for( j = i; j < i+6; ++j )								// Characters in AIS payload are 6 bits long
-		{
-			if( dsp.unstuffed_payload[j] == 1 ) byte |= 1 << (7-j);
-		}
-		dsp.decoded_data[j] = byte;
-		byte = 0;
 	}
 
 	// TODO: Buffer sizes so that they are compatible with decimation and still amount to integers and important data is not lost. Maybe datarate?
