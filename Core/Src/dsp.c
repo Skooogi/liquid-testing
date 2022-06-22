@@ -10,18 +10,14 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "filter.h"
-#include "liquid.h"
 #include <math.h>
 
 
 struct dsp dsp = {
 
 	.processing_request_flag = 0,
-	.dbuf_false_processing_request_error = 0,
 	.batch_sn = 0,
-	.downmix_freq = 0,								// TODO: Determine a correct value for this.
-	.ifft_flag = 0,									// Regular FFT
-	.bit_reverse_flag = 1,							// Reverse bits
+	.downmix_freq = 0,
 
 };
 
