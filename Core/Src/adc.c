@@ -101,103 +101,11 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 	prim = __get_PRIMASK();
 	__disable_irq();
 
-	/* Use double buffering to buy time for our heavy signal processing. */
+	memcpy(adcI.data, adcI.rx_buf, ADC_RX_BUF_SIZE);
+	memcpy(adcQ.data, adcQ.rx_buf, ADC_RX_BUF_SIZE);
 
-	/* ADCI */
-ADCI_A_buf:
-	/* If A is not full AND (if B is full OR B is not used) save to A.*/
-	if ( !adcI.A_full && (adcI.B_full || !adcI.use_B) )
-	{
-		adcI.use_A = 1;
-		if ( adcI.dbuf_idx < ADC_DBUF_LEN )
-		{
-			memcpy( adcI.buf_A + ((adcI.dbuf_idx) * ADC_RX_BUF_SIZE), adcI.rx_buf, ADC_RX_BUF_SIZE );
-			memset( adcI.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );		// This can in principle be removed (helps to identify issues for debugging)
-			adcI.dbuf_idx++;
-			goto ADCQ_A_buf;
-		}
-		else
-		{
-			adcI.use_A = 0;
-			adcI.A_full = 1;
-			adcI.dbuf_idx = 0;
-			goto ADCI_B_buf;
-		}
-	}
-ADCI_B_buf:
-	/* If B is not full AND (if A is full OR A is not in use) save to B.*/
-	if ( !adcI.B_full && (adcI.A_full || !adcI.use_A) )
-	{
-		adcI.use_B = 1;
-		if ( adcI.dbuf_idx < ADC_DBUF_LEN )
-		{
-			memcpy( adcI.buf_B + adcI.dbuf_idx * ADC_RX_BUF_SIZE, adcI.rx_buf, ADC_RX_BUF_SIZE );
-			memset( adcI.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );		// This can in principle be removed (helps to identify issues for debugging)
-			adcI.dbuf_idx++;
-			goto ADCQ_A_buf;
-		}
-		else
-		{
-			adcI.use_B = 0;
-			adcI.B_full = 1;
-			adcI.dbuf_idx = 0;
-			goto ADCI_A_buf;
-		}
-	}
-	// TODO: Can be removed once no longer needed.
-	/* The code should end up here only if both a and b buffers are full of unprocessed
-	 * data when new data is received from the ADC. Raise error flag for debugging purposes. */
-	adcI.dbuf_overrun_error = 1;
+	dsp.processing_request_flag = 1;
+	xTaskNotifyGive( DSPTaskHandle );		// Notify the DSP Task that there are data in need of processing
 
-
-	/* ADCQ */
-ADCQ_A_buf:
-	/* If A is not full AND (if B is full OR B is not used) save to A.*/
-	if ( !adcQ.A_full && (adcQ.B_full || !adcQ.use_B) )
-	{
-		adcQ.use_A = 1;
-		if ( adcQ.dbuf_idx < ADC_DBUF_LEN )
-		{
-			memcpy( adcQ.buf_A + ((adcQ.dbuf_idx) * ADC_RX_BUF_SIZE), adcQ.rx_buf, ADC_RX_BUF_SIZE );
-			memset( adcQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );		// This can in principle be removed (helps to identify issues for debugging)
-			adcQ.dbuf_idx++;
-			if ( (adcI.A_full && adcQ.A_full) || (adcI.B_full && adcQ.B_full))
-			{
-				dsp.processing_request_flag = 1;
-				xTaskNotifyGive( DSPTaskHandle );		// Notify the DSP Task that there are data in need of processing
-			}
-			return;
-		}
-		else
-		{
-			adcQ.use_A = 0;
-			adcQ.A_full = 1;
-			adcQ.dbuf_idx = 0;
-			goto ADCQ_B_buf;
-		}
-	}
-ADCQ_B_buf:
-	/* If B is not full AND (if A is full OR A is not in use) save to B.*/
-	if ( !adcI.B_full && (adcI.A_full || !adcI.use_A) )
-	{
-		adcI.use_B = 1;
-		if ( adcI.dbuf_idx < ADC_DBUF_LEN )
-		{
-			memcpy( adcI.buf_B + adcI.dbuf_idx * ADC_RX_BUF_SIZE, adcI.rx_buf, ADC_RX_BUF_SIZE );
-			memset( adcI.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );		// This can in principle be removed (helps to identify issues for debugging)
-			adcI.dbuf_idx++;
-			return;
-		}
-		else
-		{
-			adcI.use_B = 0;
-			adcI.B_full = 1;
-			adcI.dbuf_idx = 0;
-			goto ADCQ_A_buf;
-		}
-	}
-	/* The code should end up here only if both A and B buffers are full of unprocessed
-	 * data when new data is received from the ADC. Raise error flag for debugging purposes. */
-	adcI.dbuf_overrun_error = 1;
 }
 

@@ -17,30 +17,28 @@
 struct dsp dsp = {
 
 	.processing_request_flag = 0,
-	.dbuf_false_processing_request_error = 0,
 	.batch_sn = 0,
-	.downmix_freq = 0,								// TODO: Determine a correct value for this.
-	.ifft_flag = 0,									// Regular FFT
-	.bit_reverse_flag = 1,							// Reverse bits
+	.downmix_freq = 0,
 
 };
 
 
 void prvDSPInit()
 {
-	memset( dsp.fft_buf, 0, 2*FFT_SIZE*sizeof(q31_t) );
-	memset( dsp.fft_mag_buf, 0, 2*FFT_SIZE*sizeof(q31_t) );
+	memset( dsp.fft_buf, 0, 2*FFT_SIZE*sizeof(complex float) );
+	memset( dsp.fft_mag_buf, 0, 2*FFT_SIZE*sizeof(complex float) );
 }
 
 
 /* Function to remove the mean value of the elements of an array from each of its elements */
 static void prvSubtractMean(int16_t *data, uint32_t data_length)
 {
-	q15_t mean;
+
+	int16_t mean;
 	arm_mean_q15( data, ADC_RX_BUF_SIZE, &mean );
 
 	for(uint32_t i=0; i< ADC_RX_BUF_SIZE; i++) {
-		*(data + i) -= mean;
+		*(data + i) -= mean;						// subtract mean from each element in array
 	}
 
 }
@@ -181,13 +179,12 @@ static void prvDSPPipeline()
 	prvSubtractMean( adcI.data, ADC_RX_BUF_SIZE );
 	prvSubtractMean( adcQ.data, ADC_RX_BUF_SIZE );
 
-	/* Save data to fft_buf, use 32 bit values shifted left 16 bits because that helps. */
+	/* Save data to fft_buf. */
 	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i+=FFT_SIZE*2)
 	{
-		for(uint16_t j=0; j < FFT_SIZE*2; j+=2)		// Interleaving
+		for(uint32_t j=0; j < FFT_SIZE*2; j++)		// Interleaving
 		{
-			dsp.fft_buf[j] = (adcI.data[i+j]<<16);
-			dsp.fft_buf[j+1] = (adcQ.data[i+j+1]<<16);
+			dsp.fft_buf[j] = adcI.data[i+j] + adcQ.data[i+j]*I;
 		}
 	}
 
@@ -325,42 +322,9 @@ void prvDSPTask( void *pvParameters )
 			/* Processing requested, reset request flag. */
 			dsp.processing_request_flag = 0;
 
-			/* Check if the data requiring processing is in the A or B buffers of the double buffer system. */
-			if (adcI.A_full && adcQ.A_full)
-			{
-				for (int i=0;i<ADC_DBUF_LEN;i++)
-				{
-					/* Copy data from the double buffer to the actual data buffers of both ADC instances. */
-					memcpy( adcI.data, adcI.buf_A + i*ADC_RX_BUF_SIZE, ADC_RX_BUF_SIZE );
-					memcpy( adcQ.data, adcQ.buf_A + i*ADC_RX_BUF_SIZE, ADC_RX_BUF_SIZE );
-					/* Do DSP */
-					prvDSPPipeline();
-					dsp.batch_sn++;
-				}
-				adcI.A_full = 0;
-				adcQ.A_full = 0;
-			}
-			else if (adcI.B_full && adcQ.B_full)
-			{
-				for (int i=0;i<ADC_DBUF_LEN;i++)
-				{
-					/* Copy data from the double buffer to the actual data buffers of both ADC instances. */
-					memcpy( adcI.data, adcI.buf_B + i*ADC_RX_BUF_SIZE, ADC_RX_BUF_SIZE );
-					memcpy( adcI.data, adcI.buf_B + i*ADC_RX_BUF_SIZE, ADC_RX_BUF_SIZE );
-					/* Do DSP */
-					prvDSPPipeline();
-					dsp.batch_sn++;
-				}
-				adcI.B_full = 0;
-				adcQ.B_full = 0;
-			}
-			else
-			{
-				// TODO: Can be removed once no longer needed, only for debugging.
-				/* Ends up here if processing is requested when there is no data ready for processing */
-				dsp.dbuf_false_processing_request_error = 1;
-			}
-
+			/* Do DSP */
+			prvDSPPipeline();
+			dsp.batch_sn++;
 		}
 
 	}
