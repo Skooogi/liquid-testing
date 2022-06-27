@@ -5,30 +5,30 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="35a6968b-3c9d-42bd-8143-6825411f7254" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/../Core/Inc/saved_signal.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Core/Src/hI.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Core/Src/hQ.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../Core/Src/saved_signal.c" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/.gitignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/Python.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/dataFromRTT.csv" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../.settings/stm32cubeide.project.prefs" beforeDir="false" afterPath="$PROJECT_DIR$/../.settings/stm32cubeide.project.prefs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/downlinker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Core/Inc/debugRTT.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Inc/debugRTT.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Core/Inc/dsp_testing.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Inc/dsp_testing.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Core/Inc/saved_signal.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Inc/saved_signal.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Core/Src/debugRTT.c" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Src/debugRTT.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../Core/Src/dsp_testing.c" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Src/dsp_testing.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Core/Src/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Src/main.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Debug/Core/Src/adc.o" beforeDir="false" afterPath="$PROJECT_DIR$/../Debug/Core/Src/adc.o" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Debug/Kvarkensat.map" beforeDir="false" afterPath="$PROJECT_DIR$/../Debug/Kvarkensat.map" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Kvarkensat Debug.launch" beforeDir="false" afterPath="$PROJECT_DIR$/../Kvarkensat Debug.launch" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/j_usher.py" beforeDir="false" afterPath="$PROJECT_DIR$/j_usher.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/jlinker.py" beforeDir="false" afterPath="$PROJECT_DIR$/jlinker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lil_endian.py" beforeDir="false" afterPath="$PROJECT_DIR$/lil_endian.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />

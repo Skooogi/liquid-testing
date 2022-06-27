@@ -44,7 +44,8 @@ if user != 'y':     # User stops execution if they don't initiate RTT
 jlink.rtt_start()
 print(f"RTT start")
 print(f"RTT satus: {jlink.rtt_get_status()}")       # intended typo
-
+print(f"RTT buff descrips: {jlink.rtt_get_buf_descriptor(1,True)}")
+print(f"RTT buff descrips: {jlink.rtt_get_buf_descriptor(1,False)}")
 # Loop for reading the data from RTT up-buffer '1'
 while True:
     user = input("READ RTT buffer readings? a(all) or x(int) or n(exit): ")

@@ -42,27 +42,25 @@ bytes_per_int = 2                                   # as per int16_t now, should
 i_data = lil_endian.txt_reader("hI.txt")              # Saved signal from .txt file
 q_data = lil_endian.txt_reader("hQ.txt")              # Saved signal from .txt file
 
+print(f"I data read from txt: {i_data}")
 
+print(f"Q data read from txt: {q_data}")
 # Current implementation is a loop that sends test signal to RTT,
 # sleeps for while (as DSP happens on µC), and then tries to read
 # what the µC is sending back.
 # Should maybe be done with threads instead.
 while True:
-    i_bytes = lil_endian.bytes_from_data(i_data, bytes_per_int, True)
-    q_bytes = lil_endian.bytes_from_data(q_data, bytes_per_int, True)
+    i_bytes = lil_endian.bytes_from_data(i_data, bytes_per_int, False)
+    q_bytes = lil_endian.bytes_from_data(q_data, bytes_per_int, False)
+    print(f"I data as bytes: {i_bytes[0:19]}")
+
+    print(f"Q data as bytes: {q_bytes[0:19]}")
+
     jlink.rtt_write(1, i_bytes[0:19])  # write data (as bytes) to RTT down-buffer '1'
     jlink.rtt_write(2, q_bytes[0:19])  # write data (as bytes) to RTT down-buffer '2'
-                                ## DOES DATA NEED TO BE IN BYTES ALREADY -> it do
-    time.sleep(0.5)             # sleep for half a second
 
-    rtt_bytes = jlink.rtt_read(1, len(i_data) * bytes_per_int)      # Read data in bytes from RTT
-    data = lil_endian.byte_parser(rtt_bytes, bytes_per_int, False)  # Bytes to integers
+    print(f"RTT buff I descrips: {jlink.rtt_get_buf_descriptor(1, False)}")
+    print(f"RTT buff Q descrips: {jlink.rtt_get_buf_descriptor(2, False)}")
+    time.sleep(10.0)
+    print("Slept for 10 seconds. Inputting more.")
 
-    # Plotting
-    samples = np.arange(1, len(data) + 1)  # 'samples' gives indexes to read data
-    plt.figure()
-    plt.plot(samples, data, '.k')
-    plt.xlabel("sample")
-    plt.ylabel("RTT Data [unit]")
-    plt.title(f"Num. of integers read from RTT: {len(data)}")
-    plt.show()

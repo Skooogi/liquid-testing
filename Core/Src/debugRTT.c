@@ -22,22 +22,55 @@ void writeRTT(char* p) {
  * Simplified input for configuring an RTT up-buffer for sending data out over RTT
  * for Python Script 'jlinker.py' to handle.
  */
-void array2RTTbuffer(int16_t *array, int16_t size) {
-	SEGGER_RTT_ConfigUpBuffer(1, "DataOut", &array[0], size,
-	                           SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
+void array2RTTbuffer(int up_down_flag, int buff_num, int16_t *array, int16_t size) {
+	if(up_down_flag > 0){
+
+		//const char name[] = {'D','a','t','a','O','u','t', 48+buff_num,'\0'};
+
+		//const char numba = (char)48+buff_num;
+		//char name[9] = "DataOut";
+		//strncat(name, &numba, 1);
+		//const char *name_ptr = name;
+
+		//const char *name = "DataOut";
+
+		char *name = "DataOut";
+		if (buff_num == 1) {
+			name = "DataOutI";
+		} else if (buff_num == 2) {
+			name = "DataOutQ";
+		}
+
+
+		SEGGER_RTT_ConfigUpBuffer(buff_num, name, &array[0], size,
+								   SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
+	}
+	else{
+		//const char name[] = {'D','a','t','a','I','n', 48+buff_num, '\0'};
+		char *name = "DataIn";
+		if (buff_num == 1) {
+			name = "DataInI";
+		} else if (buff_num == 2) {
+			name = "DataInQ";
+		}
+		SEGGER_RTT_ConfigDownBuffer(buff_num, name, &array[0], size,
+		                             SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+	}
 	/*
 	 * Example code for using the RTT up-buffer '1'='DataOut' buffer for sending
 	 * uint16_t data out. To be used in DSP chain for sending ADC data out, for example.
 	 *
 	int16_t allocArray[0x1000];							// Allocate memory for RTT buffer
 	int16_t testArr[] = {11, 22, 33, 44, 55}; 			// Arbitrary test data array
-	array2RTTbuffer(allocArray, sizeof(allocArray));	// Configure RTT up-buffer '1'='DataOut'
+	array2RTTbuffer(1, 1, allocArray, sizeof(allocArray));	// Configure RTT up-buffer '1'='DataOut'
 	SEGGER_RTT_Write(1, &testArr[0], sizeof(testArr));	// Write the data to RTT up-buffer '1'
 
 	int16_t testArr2[] = {11, 22, 400, 20000, 32767};	// Repeat with different data values
 	SEGGER_RTT_Write(1, &testArr2[0], sizeof(testArr2));
  	 */
 }
+
+
 
 
 //Listens to Terminal 0 and awaits user input.
