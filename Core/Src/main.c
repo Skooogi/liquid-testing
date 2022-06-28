@@ -244,7 +244,6 @@ int main(void)
 
 	/************************************ FREE RTOS TEST END ************************************/
 	//Moves test data in between PC (python) & µC over RTT buffers
-
 	//xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE*((uint16_t)10), NULL, DSP_TEST_PRIORITY, NULL );
 
 
