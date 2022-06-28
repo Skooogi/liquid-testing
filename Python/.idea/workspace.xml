@@ -5,18 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="35a6968b-3c9d-42bd-8143-6825411f7254" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/downlinker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Core/Inc/debugRTT.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Inc/debugRTT.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Core/Inc/dsp_testing.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Inc/dsp_testing.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Core/Inc/saved_signal.h" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Inc/saved_signal.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Core/Src/debugRTT.c" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Src/debugRTT.c" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/uplinker.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Core/Src/dsp_testing.c" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Src/dsp_testing.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../Core/Src/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Src/main.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Debug/Kvarkensat.map" beforeDir="false" afterPath="$PROJECT_DIR$/../Debug/Kvarkensat.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/j_usher.py" beforeDir="false" afterPath="$PROJECT_DIR$/j_usher.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/downlinker.py" beforeDir="false" afterPath="$PROJECT_DIR$/downlinker.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/j_usher.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/jlinker.py" beforeDir="false" afterPath="$PROJECT_DIR$/jlinker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lil_endian.py" beforeDir="false" afterPath="$PROJECT_DIR$/lil_endian.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
