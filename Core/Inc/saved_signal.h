@@ -17,7 +17,7 @@ extern const int16_t savedQdata[20000];
  * EXAMPLE FOR WRITING 10k saved signal to RTT up-buffer
 
 int16_t allocArray[10000];							// Allocate memory for RTT buffer
-array2RTTbuffer(allocArray, sizeof(allocArray));	// Configure RTT up-buffer '1'='DataOut'
+array2RTTbuffer(1, 1, allocArray, sizeof(allocArray));	// Configure RTT up-buffer '1'='DataOut'
 int16_t testArr[10000];								// Add 10k saved signal points to test array
 for (int k = 0; k<10000; k++){
 	testArr[k] = savedIdata[k];

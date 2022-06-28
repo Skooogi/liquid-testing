@@ -1,6 +1,6 @@
 #
 #
-# 'JLinker.py' pushes and pulls measured test signal data over RTT to AIS-SDR prototype.
+# 'downlinker.py' pushes (or ushers) measured signal data over RTT to AIS-SDR prototype.
 # for debugging digital signal processing chain
 #
 #
@@ -8,8 +8,6 @@
 import pylink           # for JLink and RTT session
 import numpy as np
 import time
-import matplotlib.pyplot as plt
-
 
 import lil_endian       # simple func. flips and parses the read data bytes
 
@@ -29,7 +27,6 @@ print(f"Target connected: {con}")
 if not con:                         # if target device is not found, stop execution
     print("Target not found!")
     exit()
-
 
 # Ask user to start RTT manually, since device has to be running first
 print(f"\nMAKE SURE DEVICE HAS INITIATED RTT (i.e. is running)")
@@ -53,8 +50,8 @@ bytes_per_int = 2                                   # as per int16_t now, should
 i_data = lil_endian.txt_reader("hI.txt")            # Saved signal from .txt file
 q_data = lil_endian.txt_reader("hQ.txt")            # Saved signal from .txt file
 
-print(f"I data read from txt: {i_data[0:9]}..")
-print(f"Q data read from txt: {q_data[0:9]}..")
+print(f"I data read from txt: {i_data[0:9]}")
+print(f"Q data read from txt: {q_data[0:9]}")
 # Current implementation is a loop that sends test signal to RTT,
 # sleeps for while (as DSP happens on µC), and then tries to read
 # what the µC is sending back.
@@ -83,29 +80,4 @@ while True:
     print(f"Sent data. Sleeping..")
     time.sleep(sleeptime)
     print("Slept for {sleeptime} seconds. New loop..")
-
-    time.sleep(0.5)             # sleep atleast for half a second
-
-    read_bytes_i = jlink.rtt_read(1, samples * bytes_per_int)               # Read I data from RTT buffer '1'
-    read_bytes_q = jlink.rtt_read(2, samples * bytes_per_int)               # Read Q data from RTT buffer '2'
-    read_i = lil_endian.byte_parser(read_bytes_i, bytes_per_int, False)     # Bytes to integers
-    read_q = lil_endian.byte_parser(read_bytes_q, bytes_per_int, False)     # Bytes to integers
-
-    # PLOTTING
-    # I data first
-    sample_idxs = np.arange(1, len(read_i) + 1)  # 'samples' gives indexes to read data
-    plt.figure()
-    plt.plot(sample_idxs, read_i, '.b')
-    plt.xlabel("sample")
-    plt.ylabel("RTT Data [unit]")
-    plt.title(f"I data from RTT, {len(read_i)} samples")
-    # Q data next
-    sample_idxs = np.arange(1, len(read_q) + 1)  # 'samples' gives indexes to read data
-    plt.figure()
-    plt.plot(sample_idxs, read_q, '.r')
-    plt.xlabel("sample")
-    plt.ylabel("RTT Data [unit]")
-    plt.title(f"Q data from RTT, {len(read_q)} samples")
-
-    plt.show()
 

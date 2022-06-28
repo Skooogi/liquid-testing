@@ -24,14 +24,16 @@
 /* USER CODE BEGIN Includes */
 /* Includes ------------------------------------------------------------------*/
 
+
+/* Private includes ----------------------------------------------------------*/
+/* USER CODE BEGIN Includes */
 #include "main.h"
+#include "adc.h"
 #include "dsp.h"
 #include "cubesat_protocol.h"
-#include "usb_device.h"
-#include "receiver.h"
-#include "debugRTT.h"
 #include "dsp_testing.h"
 #include "saved_signal.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -42,6 +44,11 @@
 #include "semphr.h"
 #include "SEGGER_RTT.h"
 #include "events.h"
+
+//User
+#include "receiver.h"
+#include "debugRTT.h"
+#include "cubesat_protocol.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -90,8 +97,12 @@ TIM_HandleTypeDef htim2;
 /* USER CODE BEGIN PV */
 volatile struct eventflags eventflags;
 
+FDCAN_RxHeaderTypeDef RxHeader; //FDCAN Bus Transmit Header
+FDCAN_TxHeaderTypeDef TxHeader; //FDCAN Bus Receive Header
+uint8_t RxData[8];
+uint8_t TxData[8];
 
-
+uint8_t ubKeyNumber = 0x0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,7 +120,7 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
-//static void SystemClock_Config(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -133,7 +144,16 @@ static void prvBlinkLED( void *pvParameters ) {
 	}
 }
 
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
 
+	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData);
+	for(;;) {
+		if(RxData[0] == 'X') {
+		
+			//while(1);
+		}
+	}
+}
 
 //Initializes all needed peripherials
 //Currently only GPIO is need.
@@ -150,13 +170,13 @@ static void pvrInitBoard() {
 	MX_ADC1_Init();
 	MX_ADC3_Init();
 	MX_ADC2_Init();
-	MX_USB_DEVICE_Init();
 	MX_TIM1_Init();
 	SEGGER_RTT_Init();
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
 
+	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
 }
 
 //A tick callback used to check SysTick functionality
@@ -166,6 +186,27 @@ void vApplicationTickHook(void) {
 	while(1);
 }
 
+void canTXTask(void* param) {
+	
+	for(;;) {
+
+		TxData[0] = 'X';
+		TxData[1] = 0xAD;
+		for(uint8_t i = 0; i < 8; i++) {
+			/* Start the transmission process*/
+			TxData[2] = i;
+			if(HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK) {
+				TxData[1] = i;
+				/*Transmission request Error*/
+				Error_Handler();
+			}
+			vTaskDelay(10);
+		}
+
+		vTaskDelay(1000);
+	}
+
+}
 
 /* USER CODE END 0 */
 
@@ -177,41 +218,33 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
-
-
-	/******************************************* FREERTOS TEST BEGIN *******************************************/
-	
 	pvrInitBoard();
 
-		/************************************ FREE RTOS TEST BEGIN ************************************/
-
-	//Starts debug terminal.
-	xTaskCreate( prvDebugRTT, "RTT", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
-
+	xTaskCreate( canTXTask, "CAN_TX", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
 	//Blinks the LED
-	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE *((uint16_t)10), NULL, BLINK_PRIORITY, NULL );
+	//xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
+	/************************************ FREE RTOS TEST END ************************************/
 	//Moves test data in between PC (python) & µC over RTT buffers
-	xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE, NULL, DSP_TEST_PRIORITY, NULL );
+
+	//xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE*((uint16_t)10), NULL, DSP_TEST_PRIORITY, NULL );
+
 
 
 	/************************************ FREE RTOS TEST END ************************************/
+	/* Task acquiring latest ADC data */
+//	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
-	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );
+//	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
-	/* Task handling data bus (CubeSat protocol) */
-	//xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  CSP_PRIORITY, &ADCTaskHandle );
+	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
 
-
 	for( ;; );
-
-	/******************************************** FREERTOS TEST END *******************************************/
-
 
 
   /* USER CODE END 1 */
@@ -242,9 +275,9 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC3_Init();
   MX_ADC2_Init();
-  MX_USB_DEVICE_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -516,6 +549,25 @@ static void MX_FDCAN1_Init(void)
 
   /* USER CODE BEGIN FDCAN1_Init 0 */
 
+	TxHeader.Identifier = 0x321;
+	TxHeader.IdType = FDCAN_STANDARD_ID;
+	TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+	TxHeader.DataLength = FDCAN_DLC_BYTES_3;
+	TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+	TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+	TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	TxHeader.MessageMarker = 0;
+
+	FDCAN_FilterTypeDef sFilterConfig;
+	/* Configure Rx filter */
+	sFilterConfig.IdType = FDCAN_STANDARD_ID;
+	sFilterConfig.FilterIndex = 0;
+	sFilterConfig.FilterType = FDCAN_FILTER_MASK;
+	sFilterConfig.FilterConfig = FDCAN_FILTER_DISABLE;
+	sFilterConfig.FilterID1 = 0x701;
+	sFilterConfig.FilterID2 = 0x7FF;
+
   /* USER CODE END FDCAN1_Init 0 */
 
   /* USER CODE BEGIN FDCAN1_Init 1 */
@@ -554,7 +606,14 @@ static void MX_FDCAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK) {
+		Error_Handler();
+	}
 
+	if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
+	{
+		Error_Handler();
+	}
   /* USER CODE END FDCAN1_Init 2 */
 
 }

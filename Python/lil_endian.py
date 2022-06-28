@@ -36,6 +36,29 @@ def byte_parser(rtt_bytes: list[int], bytes_per_int: int, do_prints: bool) -> li
 
 
 #
+# Function for deconstructing i-q -data into bytes read by JLink RTT (-Topi)
+#
+def bytes_from_data(data: list[int], bytes_per_int: int, do_prints: bool) -> list[int]:
+    if do_prints:
+        print(f"'data' now: {data}")
+    # create a new list to be overridden with data
+    rtt_bytes = list(np.zeros(bytes_per_int * int(len(data))))
+
+    for i in range(0, len(data)):
+        bytes_data_point = int.to_bytes(int(data[i]), bytes_per_int, byteorder='little', signed=False)
+        for j in range(0, bytes_per_int):
+            rtt_bytes[2*i+j] = bytes_data_point[j]
+        # print(rtt_bytes[index:index + bytes_per_int])
+
+    if do_prints:
+        print(f"'rtt_bytes' now: {rtt_bytes}")
+
+    return rtt_bytes
+
+
+
+
+#
 # Writing the data to a separate .csv-file
 #
 def csv_writer(data, filename: str):

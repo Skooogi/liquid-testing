@@ -4,11 +4,10 @@
  */
 
 #include "cubesat_protocol.h"
-
+// Can pins PB8 PB9
 
 /* Task for handling the CubeSat Protocol, i.e the command interface of the payload */
-void prvCSPTask( void *pvParameters )
-{
+/*void canRXTask( void* param) {
 
 }
-
+*/
