@@ -161,7 +161,6 @@ static void pvrInitBoard() {
 	MX_ADC1_Init();
 	MX_ADC3_Init();
 	MX_ADC2_Init();
-	MX_USB_DEVICE_Init();
 	MX_TIM1_Init();
 	SEGGER_RTT_Init();
 	printf("\nConfiguring radio..\n");
@@ -219,7 +218,7 @@ int main(void)
 
 	/************************************ FREE RTOS TEST END ************************************/
 	//Moves test data in between PC (python) & µC over RTT buffers
-	xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE*((uint16_t)10), NULL, DSP_TEST_PRIORITY, NULL );
+	//xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE*((uint16_t)10), NULL, DSP_TEST_PRIORITY, NULL );
 
 
 	/************************************ FREE RTOS TEST END ************************************/
@@ -265,7 +264,6 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC3_Init();
   MX_ADC2_Init();
-  MX_USB_DEVICE_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
