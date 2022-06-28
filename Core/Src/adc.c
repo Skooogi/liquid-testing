@@ -67,7 +67,7 @@ void prvADCInit(TIM_HandleTypeDef *htim)
 
 
 	/* Start RF receiving ADCs. Save data to adcX.rx_buf */
-	if ( HAL_ADC_Start_DMA( ADCI, (uint32_t *)adcI.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
+	/*if ( HAL_ADC_Start_DMA( ADCI, (uint32_t *)adcI.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
 	{
 		Error_Handler(); //does nothing-> TODO: error handler
 	}
@@ -75,21 +75,21 @@ void prvADCInit(TIM_HandleTypeDef *htim)
     if ( HAL_ADC_Start_DMA( ADCQ, (uint32_t *)adcQ.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
     {
     	Error_Handler(); //does nothing-> TODO: error handler
-    }
+    }*/
 
 
     /* Start MCU temperature reading ADC. Save data to adcT.rx_buf */
-    if ( HAL_ADC_Start_DMA( ADCT, (uint32_t *)adcT.temperature_buf, ADC_TEMPERATURE_BUF_SIZE ) != HAL_OK )
+    /*if ( HAL_ADC_Start_DMA( ADCT, (uint32_t *)adcT.temperature_buf, ADC_TEMPERATURE_BUF_SIZE ) != HAL_OK )
     {
     	Error_Handler(); //does nothing-> TODO: error handler
-    }
+    }*/
 
 
     /* Start timer for the ADCs */
-    if ( HAL_TIM_Base_Start( TIM_1 ) != HAL_OK )		// TODO: Check if this is the right timer and right place to start it
+    /*if ( HAL_TIM_Base_Start( TIM_1 ) != HAL_OK )		// TODO: Check if this is the right timer and right place to start it
     {
     	Error_Handler(); //does nothing-> TODO: error handler
-    }
+    }*/
 
 }
 
@@ -104,8 +104,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 	memcpy(adcI.data, adcI.rx_buf, ADC_RX_BUF_SIZE);
 	memcpy(adcQ.data, adcQ.rx_buf, ADC_RX_BUF_SIZE);
 
+	//adc_val = HAL_ADC_GetValue(&hadc1);
+	//adc_val = HAL_ADC_GetValue(&hadc1);
+
 	dsp.processing_request_flag = 1;
-	xTaskNotifyGive( DSPTaskHandle );		// Notify the DSP Task that there are data in need of processing
+	HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
+	//xTaskNotifyGive( DSPTaskHandle );						// Notify the DSP Task that there are data in need of processing
 
 }
 

@@ -147,11 +147,9 @@ static void prvBlinkLED( void *pvParameters ) {
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
 
 	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData);
-	for(;;) {
-		if(RxData[0] == 'X') {
-		
-			//while(1);
-		}
+	if(RxData[0] == 'X') {
+
+		//while(1);
 	}
 }
 
@@ -177,6 +175,25 @@ static void pvrInitBoard() {
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
 
 	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
+
+
+	  // Calibrate ADCs for better accuracy and start it w/ interrupt
+	  /*if(HAL_ADCEx_Calibration_Start(ADCI, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
+	                Error_Handler();
+	  if(HAL_ADCEx_Calibration_Start(ADCQ, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
+	                Error_Handler();*/
+
+	  // Start ADCs in interrupt mode
+	  if(HAL_ADC_Start_DMA(ADCI, (uint32_t*)adcI.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+	                Error_Handler();
+	  if(HAL_ADC_Start_DMA(ADCQ, (uint32_t*)adcQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+	                Error_Handler();
+
+	  // Start PWM generation
+	  if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)
+	                Error_Handler();
+
+
 }
 
 //A tick callback used to check SysTick functionality
@@ -279,23 +296,6 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
-
-
-  // Calibrate ADCs for better accuracy and start it w/ interrupt
-  if(HAL_ADCEx_Calibration_Start(ADCI, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
-                Error_Handler();
-  if(HAL_ADCEx_Calibration_Start(ADCQ, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
-                Error_Handler();
-
-  // Start ADCs in interrupt mode
-  if(HAL_ADC_Start_IT(ADCI) != HAL_OK)
-                Error_Handler();
-  if(HAL_ADC_Start_IT(ADCQ) != HAL_OK)
-                Error_Handler();
-
-  // Start PWM generation
-  if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)
-                Error_Handler();
 
 
   /* USER CODE END 2 */
@@ -1108,6 +1108,8 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+
 
 /* USER CODE END 4 */
 
