@@ -18,12 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "adc.h"
-#include "dsp.h"
-#include "cubesat_protocol.h"
 #include "usb_device.h"
-#include "receiver.h"
-#include "debugRTT.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -37,6 +32,11 @@
 #include "semphr.h"
 #include "SEGGER_RTT.h"
 #include "events.h"
+
+//User
+#include "receiver.h"
+#include "debugRTT.h"
+#include "cubesat_protocol.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,19 +46,38 @@
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
+/* USER CODE BEGIN PD */
+/* Priorities at which the tasks are created. */
+#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
+
+
+//Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
+#define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
+#define SECOND_BLINK_FREQUENCY 			( 1000 / portTICK_PERIOD_MS )
+
+/* The number of items the queue can hold.  This is 1 as the receive task
+will remove items as they are added, meaning the send task should always find
+the queue empty. */
+#define mainQUEUE_LENGTH					( 1 )
+
+/* The LED is used to show the demo status. (not connected on Rev A hardware) */
+//#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
+#define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
+/* USER CODE END PD */
+
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-ADC_HandleTypeDef hadc1;
+ ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc3;
 DMA_HandleTypeDef hdma_adc1;
 
 FDCAN_HandleTypeDef hfdcan1;
-FDCAN_HandleTypeDef hfdcan2;
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c4;
@@ -70,16 +89,19 @@ TIM_HandleTypeDef htim1;
 /* USER CODE BEGIN PV */
 volatile struct eventflags eventflags;
 
+FDCAN_RxHeaderTypeDef RxHeader; //FDCAN Bus Transmit Header
+FDCAN_TxHeaderTypeDef TxHeader; //FDCAN Bus Receive Header
+uint8_t RxData[8];
+uint8_t TxData[8];
 
-
+uint8_t ubKeyNumber = 0x0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
-//void SystemClock_Config(void);
+void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_FDCAN1_Init(void);
-static void MX_FDCAN2_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_I2C4_Init(void);
 static void MX_SPI2_Init(void);
@@ -89,7 +111,6 @@ static void MX_ADC2_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
-static void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -106,7 +127,16 @@ static void prvBlinkLED( void *pvParameters ) {
 	}
 }
 
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
 
+	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData);
+	for(;;) {
+		if(RxData[0] == 'X') {
+		
+			//while(1);
+		}
+	}
+}
 
 //Initializes all needed peripherials
 //Currently only GPIO is need.
@@ -117,7 +147,6 @@ static void pvrInitBoard() {
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_FDCAN1_Init();
-	MX_FDCAN2_Init();
 	MX_I2C1_Init();
 	MX_I2C4_Init();
 	MX_SPI2_Init();
@@ -129,6 +158,8 @@ static void pvrInitBoard() {
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
+
+	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
 }
 
 //A tick callback used to check SysTick functionality
@@ -138,6 +169,27 @@ void vApplicationTickHook(void) {
 	while(1);
 }
 
+void canTXTask(void* param) {
+	
+	for(;;) {
+
+		TxData[0] = 'X';
+		TxData[1] = 0xAD;
+		for(uint8_t i = 0; i < 8; i++) {
+			/* Start the transmission process*/
+			TxData[2] = i;
+			if(HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK) {
+				TxData[1] = i;
+				/*Transmission request Error*/
+				Error_Handler();
+			}
+			vTaskDelay(10);
+		}
+
+		vTaskDelay(1000);
+	}
+
+}
 
 /* USER CODE END 0 */
 
@@ -151,11 +203,10 @@ int main(void)
 
 	pvrInitBoard();
 
-	//Starts debug terminal.
-	xTaskCreate( prvDebugRTT, "RTT", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
+	xTaskCreate( canTXTask, "CAN_TX", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
 	//Blinks the LED
-	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
+	//xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
 	/* Task acquiring latest ADC data */
 //	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
@@ -163,12 +214,8 @@ int main(void)
 	/* Task taking care of digital signal processing */
 //	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
 
-	/* Task handle data bus (CubeSat protocol) */
-//	xTaskCreate( prvCSPTask , "CSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
-
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
-
 
 	for( ;; );
 
@@ -178,24 +225,43 @@ int main(void)
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  //HAL_Init();
+  HAL_Init();
 
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
 
   /* Configure the system clock */
-  //SystemClock_Config();
+  SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
 
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
-
+  MX_GPIO_Init();
+  MX_DMA_Init();
+  MX_FDCAN1_Init();
+  MX_I2C1_Init();
+  MX_I2C4_Init();
+  MX_SPI2_Init();
+  MX_ADC1_Init();
+  MX_ADC3_Init();
+  MX_ADC2_Init();
+  MX_USB_DEVICE_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-  // START RADIO RECEIVER
+  /* USER CODE END 2 */
+
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
+  while (1)
+  {
+    /* USER CODE END WHILE */
+
+    /* USER CODE BEGIN 3 */
+  }
   /* USER CODE END 3 */
 }
 
@@ -203,30 +269,28 @@ int main(void)
   * @brief System Clock Configuration
   * @retval None
   */
-
-//SystemClock_Config MUST BE COMMENTED OUT.
-//This overwrites FreeRTOS implementation and breaks system timers.
-
-
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-  // Supply configuration update enable
+  /** Supply configuration update enable
+  */
   HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
-  // Configure the main internal regulator output voltage
+  /** Configure the main internal regulator output voltage
+  */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE0);
 
   while(!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
-  // Macro to configure the PLL clock source
+  /** Macro to configure the PLL clock source
+  */
   __HAL_RCC_PLL_PLLSOURCE_CONFIG(RCC_PLLSOURCE_HSE);
 
-  // Initializes the RCC Oscillators according to the specified parameters
-  // in the RCC_OscInitTypeDef structure.
-  
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
@@ -244,8 +308,8 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 
-  //Initializes the CPU, AHB and APB buses clocks
-  
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
@@ -457,6 +521,25 @@ static void MX_FDCAN1_Init(void)
 
   /* USER CODE BEGIN FDCAN1_Init 0 */
 
+	TxHeader.Identifier = 0x321;
+	TxHeader.IdType = FDCAN_STANDARD_ID;
+	TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+	TxHeader.DataLength = FDCAN_DLC_BYTES_3;
+	TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	TxHeader.BitRateSwitch = FDCAN_BRS_OFF;
+	TxHeader.FDFormat = FDCAN_CLASSIC_CAN;
+	TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	TxHeader.MessageMarker = 0;
+
+	FDCAN_FilterTypeDef sFilterConfig;
+	/* Configure Rx filter */
+	sFilterConfig.IdType = FDCAN_STANDARD_ID;
+	sFilterConfig.FilterIndex = 0;
+	sFilterConfig.FilterType = FDCAN_FILTER_MASK;
+	sFilterConfig.FilterConfig = FDCAN_FILTER_DISABLE;
+	sFilterConfig.FilterID1 = 0x701;
+	sFilterConfig.FilterID2 = 0x7FF;
+
   /* USER CODE END FDCAN1_Init 0 */
 
   /* USER CODE BEGIN FDCAN1_Init 1 */
@@ -464,7 +547,7 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE END FDCAN1_Init 1 */
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_NORMAL;
+  hfdcan1.Init.Mode = FDCAN_MODE_EXTERNAL_LOOPBACK;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
@@ -479,7 +562,7 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.MessageRAMOffset = 0;
   hfdcan1.Init.StdFiltersNbr = 0;
   hfdcan1.Init.ExtFiltersNbr = 0;
-  hfdcan1.Init.RxFifo0ElmtsNbr = 0;
+  hfdcan1.Init.RxFifo0ElmtsNbr = 20;
   hfdcan1.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
   hfdcan1.Init.RxFifo1ElmtsNbr = 0;
   hfdcan1.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
@@ -487,7 +570,7 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
   hfdcan1.Init.TxEventsNbr = 0;
   hfdcan1.Init.TxBuffersNbr = 0;
-  hfdcan1.Init.TxFifoQueueElmtsNbr = 0;
+  hfdcan1.Init.TxFifoQueueElmtsNbr = 1;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
@@ -495,61 +578,15 @@ static void MX_FDCAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN FDCAN1_Init 2 */
+	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &sFilterConfig) != HAL_OK) {
+		Error_Handler();
+	}
 
+	if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK)
+	{
+		Error_Handler();
+	}
   /* USER CODE END FDCAN1_Init 2 */
-
-}
-
-/**
-  * @brief FDCAN2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_FDCAN2_Init(void)
-{
-
-  /* USER CODE BEGIN FDCAN2_Init 0 */
-
-  /* USER CODE END FDCAN2_Init 0 */
-
-  /* USER CODE BEGIN FDCAN2_Init 1 */
-
-  /* USER CODE END FDCAN2_Init 1 */
-  hfdcan2.Instance = FDCAN2;
-  hfdcan2.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan2.Init.Mode = FDCAN_MODE_NORMAL;
-  hfdcan2.Init.AutoRetransmission = DISABLE;
-  hfdcan2.Init.TransmitPause = DISABLE;
-  hfdcan2.Init.ProtocolException = DISABLE;
-  hfdcan2.Init.NominalPrescaler = 1;
-  hfdcan2.Init.NominalSyncJumpWidth = 1;
-  hfdcan2.Init.NominalTimeSeg1 = 2;
-  hfdcan2.Init.NominalTimeSeg2 = 2;
-  hfdcan2.Init.DataPrescaler = 1;
-  hfdcan2.Init.DataSyncJumpWidth = 1;
-  hfdcan2.Init.DataTimeSeg1 = 1;
-  hfdcan2.Init.DataTimeSeg2 = 1;
-  hfdcan2.Init.MessageRAMOffset = 0;
-  hfdcan2.Init.StdFiltersNbr = 0;
-  hfdcan2.Init.ExtFiltersNbr = 0;
-  hfdcan2.Init.RxFifo0ElmtsNbr = 0;
-  hfdcan2.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan2.Init.RxFifo1ElmtsNbr = 0;
-  hfdcan2.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
-  hfdcan2.Init.RxBuffersNbr = 0;
-  hfdcan2.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
-  hfdcan2.Init.TxEventsNbr = 0;
-  hfdcan2.Init.TxBuffersNbr = 0;
-  hfdcan2.Init.TxFifoQueueElmtsNbr = 0;
-  hfdcan2.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
-  hfdcan2.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
-  if (HAL_FDCAN_Init(&hfdcan2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN FDCAN2_Init 2 */
-
-  /* USER CODE END FDCAN2_Init 2 */
 
 }
 
@@ -916,10 +953,18 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF12_FMC;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  /*Configure GPIO pins : PB11 PB12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB13 */
+  GPIO_InitStruct.Pin = GPIO_PIN_13;
+  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Alternate = GPIO_AF9_FDCAN2;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PD8 PD9 PD10 PD14
@@ -1022,4 +1067,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
