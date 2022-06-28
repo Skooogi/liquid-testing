@@ -144,7 +144,6 @@ static void pvrInitBoard() {
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_FDCAN1_Init();
-	//MX_FDCAN2_Init();
 	MX_I2C1_Init();
 	MX_I2C4_Init();
 	MX_SPI2_Init();
@@ -194,7 +193,7 @@ int main(void)
 	xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE *((uint16_t)10), NULL, BLINK_PRIORITY, NULL );
 
 	//Moves test data in between PC (python) & µC over RTT buffers
-	xTaskCreate( prvBlinkLED, "DSPtest", configMINIMAL_STACK_SIZE, NULL, DSP_TEST_PRIORITY, NULL );
+	xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE, NULL, DSP_TEST_PRIORITY, NULL );
 
 
 	/************************************ FREE RTOS TEST END ************************************/
