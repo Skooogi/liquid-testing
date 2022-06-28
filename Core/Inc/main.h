@@ -27,10 +27,12 @@ extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
+
 #include "stm32h7xx_hal.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+
 
 /* USER CODE END Includes */
 
@@ -73,6 +75,7 @@ void Error_Handler(void);
 #define CANLED_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
+
 /* GPIO macros to reduce writing and potential for mistakes */
 #define GPIOW(pin, v) HAL_GPIO_WritePin(pin ## _GPIO_Port, pin ## _Pin, v)
 #define GPIOR(pin) HAL_GPIO_ReadPin(pin ## _GPIO_Port, pin ## _Pin)
@@ -94,8 +97,6 @@ extern ADC_HandleTypeDef hadc3;
 /* Extern the TIM handle types for adc.c */
 extern TIM_HandleTypeDef htim1;
 #define TIM_1 (&htim1)			// Underscore to differentiate it from the instance name defined in main.c
-
-
 
 
 /* USER CODE END Private defines */

@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 
+
 /* Declare the extern struct sdr. */
 typedef struct sdr *sdr_t;
 extern struct sdr sdr;

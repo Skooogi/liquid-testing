@@ -17,11 +17,17 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
-#include "usb_device.h"
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "main.h"
+#include "adc.h"
+#include "dsp.h"
+#include "cubesat_protocol.h"
+#include "dsp_testing.h"
+#include "saved_signal.h"
+
 #include <stdio.h>
 #include <string.h>
 
@@ -43,27 +49,22 @@
 /* USER CODE BEGIN PTD */
 #define TERMINAL_PRIORITY 	(tskIDLE_PRIORITY + 1)
 #define BLINK_PRIORITY 		(tskIDLE_PRIORITY + 2)
+#define DSP_PRIORITY		(tskIDLE_PRIORITY + 5)
+#define DSP_TEST_PRIORITY	(tskIDLE_PRIORITY + 6)
+#define CSP_PRIORITY		(tskIDLE_PRIORITY + 10)
+
+#define DSP_STACK_SIZE		400;	// TODO: TBD
+
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-/* Priorities at which the tasks are created. */
-#define mainQUEUE_RECEIVE_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
-#define	mainQUEUE_SEND_TASK_PRIORITY		( tskIDLE_PRIORITY + 1 )
 
+/* Task handle declarations */
+TaskHandle_t ADCTaskHandle = NULL;
+TaskHandle_t DSPTaskHandle = NULL;
 
-//Frequencies of signals sent by prvFirst/SecondBlinkSignal functions.
-#define FIRST_BLINK_FREQUENCY 			( 250 / portTICK_PERIOD_MS )
-#define SECOND_BLINK_FREQUENCY 			( 1000 / portTICK_PERIOD_MS )
-
-/* The number of items the queue can hold.  This is 1 as the receive task
-will remove items as they are added, meaning the send task should always find
-the queue empty. */
-#define mainQUEUE_LENGTH					( 1 )
-
-/* The LED is used to show the demo status. (not connected on Rev A hardware) */
-//#define mainTOGGLE_LED()	GPIOW(CANLED, 0)
-#define mainTOGGLE_LED()	HAL_GPIO_TogglePin( GPIOB, GPIO_PIN_5 )
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -117,6 +118,12 @@ static void MX_TIM1_Init(void);
 /* USER CODE BEGIN 0 */
 
 
+int16_t swap_bytes(int16_t data){
+	data = data+UINT16_OFFSET;
+	return data;
+}
+
+
 static void prvBlinkLED( void *pvParameters ) {
 
 	/* Remove compiler warning about unused parameter. */
@@ -124,6 +131,7 @@ static void prvBlinkLED( void *pvParameters ) {
 	for( ;; )
 	{
 		pulseLED(500,250);
+
 	}
 }
 
@@ -155,6 +163,7 @@ static void pvrInitBoard() {
 	MX_ADC2_Init();
 	MX_USB_DEVICE_Init();
 	MX_TIM1_Init();
+	SEGGER_RTT_Init();
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
@@ -208,11 +217,19 @@ int main(void)
 	//Blinks the LED
 	//xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
+	/************************************ FREE RTOS TEST END ************************************/
+	//Moves test data in between PC (python) & µC over RTT buffers
+	xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE*((uint16_t)10), NULL, DSP_TEST_PRIORITY, NULL );
+
+
+	/************************************ FREE RTOS TEST END ************************************/
 	/* Task acquiring latest ADC data */
 //	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
 //	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
+
+	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );
 
 	/* Start the tasks and timer running. */
 	vTaskStartScheduler();
