@@ -1,6 +1,6 @@
 #
 #
-# 'downlinker.py' pushes (or ushers) measured signal data over RTT to AIS-SDR prototype.
+# 'downlinker.py' pushes (or ushers) measured Rsignal data over TT to AIS-SDR prototype.
 # for debugging digital signal processing chain
 #
 #
@@ -79,5 +79,5 @@ while True:
 
     print(f"Sent data. Sleeping..")
     time.sleep(sleeptime)
-    print("Slept for {sleeptime} seconds. New loop..")
+    print(f"Slept for {sleeptime} seconds. New loop..")
 

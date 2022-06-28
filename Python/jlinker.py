@@ -71,7 +71,7 @@ while True:
     else:
         send_sams = int(user)
 
-    last_idx = send_sams*bytes_per_int - 1
+    last_idx = (send_sams * bytes_per_int) - 1
     i_bytes = lil_endian.bytes_from_data(i_data, bytes_per_int, False)
     q_bytes = lil_endian.bytes_from_data(q_data, bytes_per_int, False)
     # print(f"I data as bytes: {i_bytes[0:last_idx]}")
@@ -86,8 +86,8 @@ while True:
 
     time.sleep(0.5)             # sleep atleast for half a second
 
-    read_bytes_i = jlink.rtt_read(1, samples * bytes_per_int)               # Read I data from RTT buffer '1'
-    read_bytes_q = jlink.rtt_read(2, samples * bytes_per_int)               # Read Q data from RTT buffer '2'
+    read_bytes_i = jlink.rtt_read(1, send_sams * bytes_per_int)               # Read I data from RTT buffer '1'
+    read_bytes_q = jlink.rtt_read(2, send_sams * bytes_per_int)               # Read Q data from RTT buffer '2'
     read_i = lil_endian.byte_parser(read_bytes_i, bytes_per_int, False)     # Bytes to integers
     read_q = lil_endian.byte_parser(read_bytes_q, bytes_per_int, False)     # Bytes to integers
 
