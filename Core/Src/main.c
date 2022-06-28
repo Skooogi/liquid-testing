@@ -275,10 +275,28 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC3_Init();
   MX_ADC2_Init();
+  MX_USB_DEVICE_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
-  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+
+
+  // Calibrate ADCs for better accuracy and start it w/ interrupt
+  if(HAL_ADCEx_Calibration_Start(ADCI, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
+                Error_Handler();
+  if(HAL_ADCEx_Calibration_Start(ADCQ, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
+                Error_Handler();
+
+  // Start ADCs in interrupt mode
+  if(HAL_ADC_Start_IT(ADCI) != HAL_OK)
+                Error_Handler();
+  if(HAL_ADC_Start_IT(ADCQ) != HAL_OK)
+                Error_Handler();
+
+  // Start PWM generation
+  if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)
+                Error_Handler();
+
 
   /* USER CODE END 2 */
 
