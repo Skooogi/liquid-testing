@@ -11,6 +11,7 @@
 #include "main.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "liquid.h"
 
 
 #define ADC_RX_PRIORITY				( tskIDLE_PRIORITY + 1 )
@@ -21,7 +22,7 @@
 #define UINT16_OFFSET 				0x8000
 #define SHORT_MAX 					0x7FFF						// Must be ADC_RX_BUF_SIZE/(2*N), where N is an integer
 #define FFT_SIZE 					0x800
-#define ADC_SAMPLERATE 				288000						// Sample rate of the ADC
+#define ADC_SAMPLERATE 				288000.0f						// Sample rate of the ADC
 #define DECIMATION_FACTOR 			3
 
 
@@ -35,7 +36,8 @@
 typedef struct rfadc {
 
 	uint8_t converting;													// Flag to tell whether the ADC is in the middle of conversions or not
-	uint16_t rx_buf[ADC_RX_BUF_SIZE];
+	ALIGN_32BYTES ( uint16_t rx_buf[ADC_RX_BUF_SIZE] );
+	ALIGN_32BYTES ( int16_t data[ADC_RX_BUF_SIZE] );
 
 } *rfadc_t;
 
