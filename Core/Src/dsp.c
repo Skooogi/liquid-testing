@@ -12,6 +12,7 @@
 #include "filter.h"
 #include "liquid.h"
 #include <math.h>
+#include <stdlib.h>
 
 
 struct dsp dsp = {
@@ -25,8 +26,28 @@ struct dsp dsp = {
 
 void prvDSPInit()
 {
-	memset( dsp.fft_buf, 0, 2*FFT_SIZE*sizeof(complex float) );
+	memset( dsp.fft_buf, 0, 2*FFT_SIZE*sizeof(complex float) );																				// Initialize buffer filled with 0s
 	memset( dsp.fft_mag_buf, 0, 2*FFT_SIZE*sizeof(complex float) );
+
+    /* resamp init */
+    dsp.resamp_filter_delay = 13;    																										// filter semi-length (filter delay)
+    dsp.resamp_rate = 0.9f;               																									// resampling rate (output/input)
+    dsp.resamp_bw = 0.5f;              																										// resampling filter bandwidth
+    dsp.resamp_slsl = -60.0f;          																										// resampling filter sidelobe suppression level
+    dsp.resamp_npfb = 32;       																											// number of filters in bank (timing resolution)
+    dsp.input_length = ADC_RX_BUF_SIZE;
+    uint32_t total_input_length = dsp.input_length + dsp.resamp_filter_delay;
+    dsp.resampled_IQ = malloc( ceilf(dsp.resamp_rate * total_input_length) * sizeof(complex float) );										// Allocate memory for the resampled// Initialize buffer filled with 0s
+    dsp.num_written = 0;   																													// number of values written to buffer
+
+	/* symsync init */
+    dsp.symsync_k = ADC_SAMPLERATE/9600;     																								// samples/symbol
+    dsp.symsync_m = 3;     																													// filter delay (symbols)
+    dsp.symsync_beta = 0.3f;  																												// filter excess bandwidth factor
+    dsp.symsync_npfb  = 32;    																												// number of polyphase filters in bank
+    dsp.symsync_ftype = LIQUID_FIRFILT_RRC; 																								// filter type
+    dsp.symsyncer = symsync_crcf_create_rnyquist( dsp.symsync_ftype, dsp.symsync_k, dsp.symsync_m, dsp.symsync_beta, dsp.symsync_npfb );	// Create symbol synchronizer
+
 }
 
 
@@ -38,7 +59,7 @@ static void prvSubtractMean(int16_t *data, uint32_t data_length)
 	arm_mean_q15( data, ADC_RX_BUF_SIZE, &mean );
 
 	for(uint32_t i=0; i< ADC_RX_BUF_SIZE; i++) {
-		*(data + i) -= mean;						// subtract mean from each element in array
+		*(data + i) -= mean;																												// subtract mean from each element in array
 	}
 
 }
@@ -57,7 +78,7 @@ void prvGMSKDemodulate(uint32_t startflag,  uint32_t endflag, int16_t *demodulat
 	complex prev_complex_data;
 	complex temp_complex_data;
 	/* Demodulation */
-	for(uint32_t i = startflag; i < endflag; i++)
+	/*for(uint32_t i = startflag; i < endflag; i++)
 	{
 		temp_I = -(float64_t)(adcI.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
 		temp_Q = -(float64_t)(adcQ.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
@@ -66,7 +87,7 @@ void prvGMSKDemodulate(uint32_t startflag,  uint32_t endflag, int16_t *demodulat
 		temp_complex_data = complex_data * conj(prev_complex_data); 		// Polar discriminator
 		demodulated_IQ[i-startflag] = (int16_t)(SHORT_MAX * (atan2(cimag(temp_complex_data), creal(temp_complex_data)) / M_PI));
 		prev_complex_data = complex_data;
-	}
+	}*/
 }
 
 
@@ -79,11 +100,11 @@ static uint32_t prvDetectPreamble(uint8_t *data)
 	{
 		for ( uint32_t i=2; i<AIS_PREAMBLE_LENGTH; i+=2 )
 		{
-			if ( data[i] != data[i-2] && data[i] == data[i+1] )	// Check that the current "bit" is equal to the next but different from the (two) previous
+			if ( data[i] != data[i-2] && data[i] == data[i+1] )		// Check that the current "bit" is equal to the next but different from the (two) previous
 			{
 				continue;
 			}
-			else												// The "bits" did not represent a preamble, break out of loop and return 0.
+			else													// The "bits" did not represent a preamble, break out of loop and return 0.
 			{
 				preamble_found = 0;
 				break;
@@ -171,50 +192,176 @@ static void prvBitArrayToBinary()
 }
 
 
+
+
+
+
+/* Static callback function for syncronizer */
+static int prvSyncCallback(unsigned char *  _header,
+                    int              _header_valid,
+                    unsigned char *  _payload,
+                    unsigned int     _payload_len,
+                    int              _payload_valid,
+                    framesyncstats_s _stats,
+                    void *           _userdata)
+{
+    /*printf("***** callback invoked!\n");
+    printf("    header  (%s)\n",  _header_valid ? "valid" : "INVALID");
+    printf("    payload (%s)\n", _payload_valid ? "valid" : "INVALID");
+    framesyncstats_print(&_stats);*/
+
+    // type-cast, de-reference, and increment frame counter
+    uint32_t * counter = (uint32_t *) _userdata;
+    (*counter)++;
+
+    return 0;
+}
+
+
 /* Function taking care of the complete DSP pipeline from raw data to a decoded signal */
 static void prvDSPPipeline()
 {
+	/*
+	 * The pipeline has a following outline (TODO: Confirm and finalize the outline):
+	 *
+	 * 1. 	Interleave, i.e. combine the I and Q signals to one single complex IQ array.
+	 * 2. 	Matched filter			----,
+	 * 3. 	Coarse freq sync			|---- use symsync object (liquid-dsp)
+	 * 4. 	Time sync					|
+	 * 5. 	Fine freq sync			----'
+	 * 6.	Detect peak frequency	--------- Detect whether data contains signal @ +25 kHz or -25 kHz
+	 * 7.	Downmix					--------- +25 kHz or -25 kHz to 0 Hz
+	 * 8. 	Demodulation			--------- use gmksdem object (liquid-dsp)
+	 * 9.	Lowpass filter			--------- filter out everything except signal of interest
+	 * 10.	Decimation				--------- decimate excessive samples
+	 * 11. 	Frame detect/sync		--------- use flexframe object (liquid-dsp) (or custom detection?)
+	 * 12. 	Channel decoding		--------- bit de-stuffing, packing "bits" to bytes
+	 * 13. 	--> Output
+	 *
+	 * */
+
+
 
 	/* Remove DC spike from the data. */
 	prvSubtractMean( adcI.data, ADC_RX_BUF_SIZE );
 	prvSubtractMean( adcQ.data, ADC_RX_BUF_SIZE );
 
+	/* Interleave the I and Q signals to one single complex IQ array. */
+	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i++)
+	{
+		dsp.raw_IQ[i] = adcI.data[i] + adcQ.data[i]*I;
+	}
+
+
+	/* Assume channel. TODO: Use fft to find on which channel there is a signal (or is there any signal on the right channels at all) */
+#define A 1		// Is the signal on the A channel? (NOTE: This can be choosed for debugging)
+#if A
+	dsp.mix_freq = -25e3;		// Amount to shift by
+#else
+	dsp.mix_freq = +25e3		// Amount to shift by
+#endif
+
+
+	/* Downmix from +25 kHz or -25 kHz to 0 Hz. */
+	if(dsp.mix_freq != 0)
+	{
+		float t;
+		for(uint16_t i = 0; i<ADC_RX_BUF_SIZE; i++)
+		{
+			t = (1.0*i) / (1.0*ADC_SAMPLERATE);														// Time of sample
+			dsp.raw_IQ[i] = (complex float) (dsp.raw_IQ[i] * cexp(2*I*M_PI*dsp.mix_freq*t));		// Downmix
+		}
+	}
+
+
+	/* Lowpass filter */
+    for ( uint32_t i=0; i<ADC_RX_BUF_SIZE; i++ )
+    {
+        firfilt_crcf_push( filter.filter, dsp.raw_IQ[i] );    					// Push filter input sample to the internal buffer of the filter
+        firfilt_crcf_execute( filter.filter, &(dsp.filtered_IQ[i]) ); 			// Compute output
+    }
+
+
+    /* Resample (decimate) */
+    dsp.resampler = resamp_crcf_create( dsp.resamp_rate, dsp.resamp_filter_delay, dsp.resamp_bw, dsp.resamp_slsl, dsp.resamp_npfb );	// Create resampler
+    resamp_crcf_execute_block( dsp.resampler, dsp.filtered_IQ, dsp.input_length, dsp.resampled_IQ, &(dsp.num_written));     			// Execute resampler
+
+
+    /* Time synchronization */
+    //dsp.symsyncer =
+
+
+
+
+
+
+    /* Create symbol synchronizer */
+    //unsigned int nx;            // number of input samples
+    //unsigned int num_written;   // number of values written to buffer
+
+    // ... initialize input, output ...
+
+    // execute symbol synchronizer, storing result in output buffer
+    //symsync_crcf_execute(dsp.symsyncer, x, nx, y, &num_written);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	/* Detect data frames and decode them using the frame synchronizer */
+	flexframesync frame_syncronizer = flexframesync_create(prvSyncCallback, (void*)&(dsp.frame_counter));
+
+	flexframesync_execute(frame_syncronizer, dsp.raw_IQ, ADC_RX_BUF_SIZE);
+
 	/* Save data to fft_buf. */
-	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i+=FFT_SIZE*2)
+	/*for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i+=FFT_SIZE*2)
 	{
 		for(uint32_t j=0; j < FFT_SIZE*2; j++)		// Interleaving
 		{
 			dsp.fft_buf[j] = adcI.data[i+j] + adcQ.data[i+j]*I;
 		}
-	}
+	}*/
 
 	/* Perform FFT */
-	arm_cfft_q31(&arm_cfft_sR_q31_len2048, dsp.fft_buf, dsp.ifft_flag, dsp.bit_reverse_flag);
+	//arm_cfft_q31(&arm_cfft_sR_q31_len2048, dsp.fft_buf, dsp.ifft_flag, dsp.bit_reverse_flag);
 	/* Calculate the complex magnitude of the FFT. */
-	arm_cmplx_mag_q31(dsp.fft_buf, dsp.fft_mag_buf, FFT_SIZE);
+	//arm_cmplx_mag_q31(dsp.fft_buf, dsp.fft_mag_buf, FFT_SIZE);
 	/* Find max magnitude and index of said max magnitude */
-	arm_max_q31(dsp.fft_mag_buf, FFT_SIZE, &(dsp.fft_max_mag), &(dsp.fft_max_mag_idx));
+	//arm_max_q31(dsp.fft_mag_buf, FFT_SIZE, &(dsp.fft_max_mag), &(dsp.fft_max_mag_idx));
 
 	/* Calculate peak frequency */
-	if ( dsp.fft_max_mag_idx > FFT_SIZE/2 )		// On right plane --> get negative value
+	/*if ( dsp.fft_max_mag_idx > FFT_SIZE/2 )		// On right plane --> get negative value
 	{
 		dsp.mix_freq = (int32_t)(dsp.fft_max_mag_idx * ((ADC_SAMPLERATE/2) / FFT_SIZE) % (ADC_SAMPLERATE/2)) - ADC_SAMPLERATE/2;
 	}
-	else  										// On left plane --> get positive value
+	else  											// On left plane --> get positive value
 	{
 		dsp.mix_freq = dsp.fft_max_mag_idx * (ADC_SAMPLERATE/2) / FFT_SIZE;
-	}
+	}*/
 
 	/* Peak expected around 25 kHz, check if mix_freq has valid value */
-	if( (dsp.mix_freq > 30000 && dsp.mix_freq < 20000) || (dsp.mix_freq < -30000 && dsp.mix_freq > -20000) )	// mix_frequency far off, not correct one
+	/*if( (dsp.mix_freq > 30000 && dsp.mix_freq < 20000) || (dsp.mix_freq < -30000 && dsp.mix_freq > -20000) )	// mix_frequency far off, not correct one
 	{
 		// TODO: Do some proper error handling if mix_freq is invalid.
 		dsp.mix_freq = 0;
 		memset(dsp.fft_mag_buf, 0, 2*FFT_SIZE*sizeof(q31_t));
-	}
+	}*/
 
 	/* Downmixing */
-	if(dsp.mix_freq != 0)
+	/*if(dsp.mix_freq != 0)
 	{
 		for(uint16_t i = 0; i<ADC_RX_BUF_SIZE; i++)
 		{
@@ -224,38 +371,47 @@ static void prvDSPPipeline()
 			  adcI.data[i] =(adcI.data[i])*dsp.sine_value;	// TODO: float
 			  adcQ.data[i] =(adcQ.data[i])*dsp.sine_value;	// TODO: float
 		}
-	}
+	}*/
 
 	/* Lowpass filter both I and Q data */
-	for(uint32_t i=0; i < NUM_BLOCKS; i++)
+	/*for(uint32_t i=0; i < NUM_BLOCKS; i++)
 	{
 		arm_fir_q15(&(filters.fir1), adcI.data+i*BLOCK_SIZE, adcI.data_fir+i*BLOCK_SIZE, BLOCK_SIZE);
 	}
 	for(int i=0; i < NUM_BLOCKS; i++)
 	{
 		arm_fir_q15(&(filters.fir1), adcQ.data+i*BLOCK_SIZE, adcQ.data_fir+i*BLOCK_SIZE, BLOCK_SIZE);
-	}
+	}*/
 
 	/* Demodulate I and Q signals, save result to demodulated_IQ */
-	prvGMSKDemodulate(0, ADC_RX_BUF_SIZE, dsp.demodulated_IQ);
+	//prvGMSKDemodulate(0, ADC_RX_BUF_SIZE, dsp.demodulated_IQ);
+
+	/* After demodulation, do something */
+    // options
+    /*unsigned int n=8;                       // original data message length
+    crc_scheme check = LIQUID_CRC_16;       // data integrity check
+    fec_scheme fec0 = LIQUID_FEC_NONE; 		// inner code
+    fec_scheme fec1 = LIQUID_FEC_NONE;      // outer code
+    float bit_error_rate = 0.0f;            // bit error rate*/
+
 
 	/* TODO: Implement clock recovery Müller Müller */
 
 	/* Filter the demodulated data with a 0.1 lowpass filter */
-	for(uint32_t i=0; i < NUM_BLOCKS; i++)
+	/*for(uint32_t i=0; i < NUM_BLOCKS; i++)
 	{
 		arm_fir_q15(&(filters.fir2), dsp.demodulated_IQ+i*BLOCK_SIZE, dsp.processed_data+i*BLOCK_SIZE, BLOCK_SIZE);
-	}
+	}*/
 
 
 	/* Decimate the data */
-	for(uint32_t i = 0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++)
+	/*for(uint32_t i = 0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++)
 	{
 		  dsp.decimated_data[i] = dsp.processed_data[i*DECIMATION_FACTOR];
-	}
+	}*/
 
 	/* Digitize the data */
-	prvSubtractMean(dsp.decimated_data, ADC_RX_BUF_SIZE/DECIMATION_FACTOR);		// Subtract the mean from the data.
+	/*prvSubtractMean(dsp.decimated_data, ADC_RX_BUF_SIZE/DECIMATION_FACTOR);		// Subtract the mean from the data.
 	for (uint32_t i=0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR; i++)
 	{
 		if (dsp.decimated_data[i] >= 0)											// "Bit" is 1 if datapoint >= 0.
@@ -266,22 +422,22 @@ static void prvDSPPipeline()
 		{
 			dsp.digitized_data[i] = 0;
 		}
-	}
+	}*/
 
 	/* Look for preamble, start flag, and end flag. Determine payload length and destuff payload data. */
-	for (uint32_t i=0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR - AIS_PACKAGE_MAX_LENGHT; i++)
-	{
+	//for (uint32_t i=0; i<ADC_RX_BUF_SIZE/DECIMATION_FACTOR - AIS_PACKAGE_MAX_LENGHT; i++)
+	//{
 		/* If true, then preamble found */
-		if ( prvDetectPreamble(dsp.digitized_data + i) )
-		{
+		//if ( prvDetectPreamble(dsp.digitized_data + i) )
+		//{
 			/* If true, then start flag found */
-			if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_PREAMBLE_LENGTH) )
-			{
+			//if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_PREAMBLE_LENGTH) )
+			//{
 				/*  */
-				for ( dsp.stuffed_payload_length=0; dsp.stuffed_payload_length<=AIS_MAX_PAYLOAD_LENGTH; dsp.stuffed_payload_length++ )
-				{
+				//for ( dsp.stuffed_payload_length=0; dsp.stuffed_payload_length<=AIS_MAX_PAYLOAD_LENGTH; dsp.stuffed_payload_length++ )
+				//{
 					/* If true, end flag detected, stop counting */
-					if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH) )
+					/*if ( prvDetectStartOrEndFlag(dsp.digitized_data + i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH) )
 					{
 						break;
 					}
@@ -289,7 +445,7 @@ static void prvDSPPipeline()
 				prvPayloadDestuff(dsp.digitized_data, i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH);
 			}
 		}
-	}
+	}*/
 
 	// TODO: Buffer sizes so that they are compatible with decimation and still amount to integers and important data is not lost. Maybe datarate?
 

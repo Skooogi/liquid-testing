@@ -31,13 +31,13 @@ uint32_t prim;
 /* Instance of ADC data and state struct for ADCI (&hadc1) */
 struct rfadc adcI = {
 	.converting = 0,
-	.dbuf_overrun_error = 0
+	//.dbuf_overrun_error = 0
 };
 
 /* Instance of ADC data and state struct for ADCQ (&hadc2) */
 struct rfadc adcQ = {
 	.converting = 0,
-	.dbuf_overrun_error = 0
+	//.dbuf_overrun_error = 0
 };
 
 /* Instance of ADC data and state struct for ADCT (&hadc3) */
@@ -57,11 +57,11 @@ void prvADCInit(TIM_HandleTypeDef *htim)
 
 	memset( adcI.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
 	memset( adcI.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-	memset( adcI.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	//memset( adcI.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
 
 	memset( adcQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
 	memset( adcQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-	memset( adcQ.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	//memset( adcQ.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
 
 	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint16_t) );
 

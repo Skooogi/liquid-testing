@@ -18,6 +18,9 @@
 #define BLOCK_SIZE         				64
 #define NUM_BLOCKS 						ADC_RX_BUF_SIZE/BLOCK_SIZE/2
 
+#define SAMPLES_PER_SYMBOL				3
+#define SYMBOLRATE						9600.0f
+
 #define AIS_PACKAGE_MAX_LENGHT			256								// bits
 #define AIS_PREAMBLE_LENGTH				24								// bits
 #define AIS_START_END_FLAG_LENGTH		8								// bits
@@ -33,10 +36,43 @@ typedef struct dsp {
 
 	uint8_t processing_request_flag;
 	uint32_t batch_sn;
+	uint32_t frame_counter;
 
+	float downmix_freq;
+
+	/* Arrays to store intermediate results. */
+	complex float raw_IQ[ADC_RX_BUF_SIZE];
+	complex float filtered_IQ[ADC_RX_BUF_SIZE];
+	complex float *resampled_IQ;
+
+	/* Resampler (resamp) options (for decimation) */
+    resamp_crcf resampler;													// Resample object
+    uint32_t resamp_filter_delay;		    								// filter semi-length (filter delay)
+    float resamp_rate;               										// resampling rate (output/input)
+    float resamp_bw;              											// resampling filter bandwidth
+    float resamp_slsl;          											// resampling filter sidelobe suppression level
+    uint32_t resamp_npfb;       											// number of filters in bank (timing resolution)
+    uint32_t input_length;													// number of input samples
+    unsigned int num_written;   											// number of values written to buffer
+
+	/* Symbol synchronizer (symsync) options */
+	symsync_crcf symsyncer;
+    uint32_t symsync_k;    													// samples/symbol
+    uint32_t symsync_m;  	 												// filter delay (symbols)
+    float symsync_beta;  													// filter excess bandwidth factor
+    uint32_t symsync_npfb;    												// number of polyphase filters in bank
+    int32_t symsync_ftype; 													// filter type
+
+
+
+
+
+
+
+
+	// All below this is the old implementation, stored only for reference in development phase.
 	complex float raw_complex_data[ADC_RX_BUF_SIZE];
 	complex float demodulated_IQ[ADC_RX_BUF_SIZE];
-	float downmix_freq;
 
 	complex float fft_max_mag;
 	uint32_t fft_max_mag_idx;
@@ -55,7 +91,7 @@ typedef struct dsp {
 
 	uint8_t	decoded_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR/6];
 
-	// TODO: Explain all variables.w
+	// TODO: Explain all variables.
 
 } *dsp_t;
 
