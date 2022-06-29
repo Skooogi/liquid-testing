@@ -6,7 +6,7 @@
  */
 #include <stdio.h>
 #include "main.h"
-#include "freeRTOS.h"
+#include "FreeRTOS.h"
 #include "debugRTT.h"
 #include "saved_signal.h"
 
