@@ -5,7 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="35a6968b-3c9d-42bd-8143-6825411f7254" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../.settings/language.settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../.settings/language.settings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Core/Src/dsp_testing.c" beforeDir="false" afterPath="$PROJECT_DIR$/../Core/Src/dsp_testing.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Debug/Kvarkensat.map" beforeDir="false" afterPath="$PROJECT_DIR$/../Debug/Kvarkensat.map" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />

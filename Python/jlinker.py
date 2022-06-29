@@ -52,6 +52,7 @@ sleeptime = 10                                      # How long a loop sleeps aft
 bytes_per_int = 2                                   # as per int16_t now, should be float though
 i_data = lil_endian.txt_reader("hI.txt")            # Saved signal from .txt file
 q_data = lil_endian.txt_reader("hQ.txt")            # Saved signal from .txt file
+total_data = len(i_data)                            # Total data length to keep cycling data in loop
 
 print(f"I data read from txt: {i_data[0:9]}..")
 print(f"Q data read from txt: {q_data[0:9]}..")
