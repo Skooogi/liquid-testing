@@ -17,7 +17,7 @@ void prvDSPTestingTask( void *pvParameters ) {
 	( void ) pvParameters;
 
 
-	int samples = 5000;  // How many samples are received and sent back. Size of alloc'd buffers in int16 s.
+	int samples = 200;  // How many samples are received and sent back. Size of alloc'd buffers in int16 s.
 	int bytesPsamp = 2;  // 2 bytes per data sample (int16_t)
 	printf("Begin DSP testing task\n");
 
@@ -25,7 +25,11 @@ void prvDSPTestingTask( void *pvParameters ) {
 	/*
 	 * DATA IN part
 	 */
-	// Allocate and configure RTT down-buffers
+	// Allocate and configure RTT buffers
+	int16_t allocArrayI[samples];								// Allocate memory for RTT buffer
+	int16_t allocArrayQ[samples];								// Allocate memory for RTT buffer
+	array2RTTbuffer(1, 1, allocArrayI, sizeof(allocArrayI));	// Configure RTT up-buffer '1'='DataOutI'
+	array2RTTbuffer(1, 2, allocArrayQ, sizeof(allocArrayQ));	// Configure RTT up-buffer '2'='DataOutQ
 	int16_t allocDownArrayI[samples];								// Allocate memory for RTT buffer
 	int16_t allocDownArrayQ[samples];								// Allocate memory for RTT buffer
 	array2RTTbuffer(-1, 1, allocDownArrayI, sizeof(allocDownArrayI));	// Configure RTT down-buffer '1'='DataInI'
@@ -64,10 +68,6 @@ void prvDSPTestingTask( void *pvParameters ) {
 	/*
 	 * DATA OUT part
 	 */
-	int16_t allocArrayI[samples];								// Allocate memory for RTT buffer
-	int16_t allocArrayQ[samples];								// Allocate memory for RTT buffer
-	array2RTTbuffer(1, 1, allocArrayI, sizeof(allocArrayI));	// Configure RTT up-buffer '1'='DataOutI'
-	array2RTTbuffer(1, 2, allocArrayQ, sizeof(allocArrayQ));	// Configure RTT up-buffer '2'='DataOutQ'
 
 	/*
 	 * // Add 10k _SAVED_ signal points to test array ; OBSOLETE as data samples come through RTT now

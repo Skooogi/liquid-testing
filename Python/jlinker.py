@@ -47,7 +47,7 @@ print(f"RTT down-buff Q desc: {jlink.rtt_get_buf_descriptor(2, False)}")
 #
 # VARIABLES TO MODIFY, especially 'samples', 'bytes_per_int' might screw everything
 #
-samples = 5000                                      # How many samples are processed per loop.
+samples = 200                                      # How many samples are processed per loop.
 sleeptime = 10                                      # How long a loop sleeps after sending data.
 bytes_per_int = 2                                   # as per int16_t now, should be float though
 i_data = lil_endian.txt_reader("hI.txt")            # Saved signal from .txt file
