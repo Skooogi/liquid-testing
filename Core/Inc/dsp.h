@@ -35,6 +35,8 @@
 
 typedef struct dsp {
 
+	// TODO: Could maybe make own structs for different objects
+
 	uint8_t processing_request_flag;
 	uint32_t batch_sn;
 
@@ -46,6 +48,8 @@ typedef struct dsp {
 	complex float raw_IQ[ADC_RX_BUF_SIZE];
 	complex float filtered_IQ[ADC_RX_BUF_SIZE];
 	complex float *resampled_IQ;
+	complex float *synced_IQ;
+    uint32_t *demod_output;
 
 	/* Resampler (resamp) options (for decimation) */
     resamp_crcf resampler;													// Resample object
@@ -54,16 +58,26 @@ typedef struct dsp {
     float resamp_bw;              											// resampling filter bandwidth
     float resamp_slsl;          											// resampling filter sidelobe suppression level
     uint32_t resamp_npfb;       											// number of filters in bank (timing resolution)
-    uint32_t input_length;													// number of input samples
-    unsigned int num_written;   											// number of values written to buffer
+    uint32_t resamp_input_length;											// number of input samples
+    uint32_t resamp_output_length;											// Number of output samples
+    unsigned int resamp_num_written;   										// number of values written to buffer
 
 	/* Symbol synchronizer (symsync) options */
-	symsync_crcf symsyncer;
-    uint32_t symsync_k;    													// samples/symbol
-    uint32_t symsync_m;  	 												// filter delay (symbols)
+	symsync_crcf symsyncer;													// Symsync object
+    uint32_t symsync_sampersym;    											// samples/symbol
+    uint32_t symsync_filter_delay;  	 									// filter delay (symbols)
     float symsync_beta;  													// filter excess bandwidth factor
     uint32_t symsync_npfb;    												// number of polyphase filters in bank
     int32_t symsync_ftype; 													// filter type
+    unsigned int symsync_num_written;										// number of values written to buffer
+
+    /* GMSK demodulation (gmskdem) options */
+    gmskdem demod;															// GMSK demodulator object
+    uint32_t demod_sampersym;    											// filter samples/symbol
+    uint32_t demod_filter_delay;    										// filter delay (symbols)
+    float demod_BT;    														// bandwidth-time product
+
+
 
 
 

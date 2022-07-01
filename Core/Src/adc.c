@@ -89,10 +89,6 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc){
 
 	if ( hadc == &hadc1 )
 	{
-		for (uint32_t i; i<ADC_RX_BUF_SIZE; i++)
-		{
-
-		}
 		memcpy(adcIQ.data, adcIQ.rx_buf, sizeof(uint32_t)*ADC_RX_BUF_SIZE/2);
 	}
 

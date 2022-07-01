@@ -34,31 +34,49 @@ void prvDSPInit()
     dsp.resamp_bw = 0.5f;              																										// resampling filter bandwidth
     dsp.resamp_slsl = -60.0f;          																										// resampling filter sidelobe suppression level
     dsp.resamp_npfb = 32;       																											// number of filters in bank (timing resolution)
-    dsp.input_length = ADC_RX_BUF_SIZE;
-    uint32_t total_input_length = dsp.input_length + dsp.resamp_filter_delay;
-    dsp.resampled_IQ = malloc( ceilf(dsp.resamp_rate * total_input_length) * sizeof(complex float) );										// Allocate memory for the resampled// Initialize buffer filled with 0s
-    dsp.num_written = 0;   																													// number of values written to buffer
+    dsp.resamp_input_length = ADC_RX_BUF_SIZE + dsp.resamp_filter_delay;																		// total length of resampler input
+    dsp.resamp_output_length = ceilf(dsp.resamp_rate * dsp.resamp_input_length) * sizeof(complex float);											// resampler output length
+    dsp.resampled_IQ = malloc( dsp.resamp_output_length );																					// Allocate memory for the resampled
+    dsp.resamp_num_written = 0;   																											// number of values written to buffer
+    dsp.resampler = resamp_crcf_create( dsp.resamp_rate, dsp.resamp_filter_delay, dsp.resamp_bw, dsp.resamp_slsl, dsp.resamp_npfb );		// Create resampler
 
+
+    // TODO: Is only symsync enough? Or is only demod enough? Or are both needed and in which order?
 	/* symsync init */
-    dsp.symsync_k = ADC_SAMPLERATE/9600;     																								// samples/symbol
-    dsp.symsync_m = 3;     																													// filter delay (symbols)
+    dsp.symsync_sampersym = ADC_SAMPLERATE/9600;     																						// samples/symbol
+    dsp.symsync_filter_delay = 3;     																										// filter delay (symbols)
     dsp.symsync_beta = 0.3f;  																												// filter excess bandwidth factor
     dsp.symsync_npfb  = 32;    																												// number of polyphase filters in bank
-    dsp.symsync_ftype = LIQUID_FIRFILT_RRC; 																								// filter type
-    dsp.symsyncer = symsync_crcf_create_rnyquist( dsp.symsync_ftype, dsp.symsync_k, dsp.symsync_m, dsp.symsync_beta, dsp.symsync_npfb );	// Create symbol synchronizer
+    dsp.symsync_ftype = LIQUID_FIRFILT_GMSKRX; 																								// filter type
+    dsp.synced_IQ = malloc( dsp.resamp_output_length );					// TODO: Confirm the length																					// Same length as dsp.resampled_IQ
+    dsp.symsync_num_written = 0;   																											// number of values written to buffer
+    dsp.symsyncer = symsync_crcf_create_rnyquist( dsp.symsync_ftype, dsp.symsync_sampersym, dsp.symsync_filter_delay, dsp.symsync_beta, dsp.symsync_npfb );		// Create symbol synchronizer
+
+    /* demod init */
+    dsp.demod_sampersym = dsp.symsync_sampersym;    																						// filter samples/symbol
+    dsp.demod_filter_delay = dsp.symsync_filter_delay;    																											// filter delay (symbols)
+    dsp.demod_BT = 0.25f;    																												// bandwidth-time product
+    dsp.demod_output = malloc( dsp.resamp_output_length );				// TODO: Fix the length
+    dsp.demod = gmskdem_create(dsp.demod_sampersym, dsp.demod_filter_delay, dsp.demod_BT);													// Create demod object
 
 }
 
 
 /* Function to remove the mean value of the elements of an array from each of its elements */
-static void prvSubtractMean(int16_t *data, uint32_t data_length)
+static void prvSubtractMean(complex float *data, uint32_t data_length)
 {
 
-	int16_t mean;
-	arm_mean_q15( data, ADC_RX_BUF_SIZE, &mean );
+	float real_mean;
+	float imag_mean;
+	for (uint32_t i=0; i<ADC_RX_BUF_SIZE; i++)
+	{
+		real_mean = crealf(data[i]);
+		imag_mean = cimagf(data[i]);
+
+	}
 
 	for(uint32_t i=0; i< ADC_RX_BUF_SIZE; i++) {
-		*(data + i) -= mean;																												// subtract mean from each element in array
+		data[i] -= (real_mean + imag_mean*I);																												// subtract mean from each element in array
 	}
 
 }
@@ -224,17 +242,18 @@ static void prvDSPPipeline()
 	 * The pipeline has a following outline (TODO: Confirm and finalize the outline):
 	 *
 	 * 1. 	Interleave, i.e. combine the I and Q signals to one single complex IQ array.
+	 * 2.	Remove DC offset		--------- Subtract mean from signal
 	 * 2. 	Matched filter			----,
-	 * 3. 	Coarse freq sync			|---- use symsync object (liquid-dsp)
+	 * 3. 	Coarse freq sync			|---- Use symsync object (liquid-dsp)
 	 * 4. 	Time sync					|
 	 * 5. 	Fine freq sync			----'
-	 * 6.	Detect peak frequency	--------- Detect whether data contains signal @ +25 kHz or -25 kHz
+	 * 6.	Detect peak frequency	--------- Detect whether data contains signal @ +25 kHz or -25 kHz TODO: Currently no estimation, only predefined channel choice
 	 * 7.	Downmix					--------- +25 kHz or -25 kHz to 0 Hz
-	 * 8. 	Demodulation			--------- use gmksdem object (liquid-dsp)
-	 * 9.	Lowpass filter			--------- filter out everything except signal of interest
-	 * 10.	Decimation				--------- decimate excessive samples
-	 * 11. 	Frame detect/sync		--------- use flexframe object (liquid-dsp) (or custom detection?)
-	 * 12. 	Channel decoding		--------- bit de-stuffing, packing "bits" to bytes
+	 * 8. 	Demodulation			--------- Use gmksdem object (liquid-dsp)
+	 * 9.	Lowpass filter			--------- Filter out everything except signal of interest
+	 * 10.	Decimation				--------- Decimate excessive samples
+	 * 11. 	Frame detect/sync		--------- Use flexframe object (liquid-dsp) (or custom detection?)
+	 * 12. 	Channel decoding		--------- Bit de-stuffing, packing "bits" to bytes
 	 * 13. 	--> Output
 	 *
 	 * */
@@ -278,32 +297,25 @@ static void prvDSPPipeline()
 	/* Lowpass filter */
     for ( uint32_t i=0; i<ADC_RX_BUF_SIZE; i++ )
     {
-        firfilt_crcf_push( filter.filter, dsp.raw_IQ[i] );    					// Push filter input sample to the internal buffer of the filter
-        firfilt_crcf_execute( filter.filter, &(dsp.filtered_IQ[i]) ); 			// Compute output
+        firfilt_crcf_push( filter.filter, dsp.raw_IQ[i] );    										// Push filter input sample to the internal buffer of the filter
+        firfilt_crcf_execute( filter.filter, &(dsp.filtered_IQ[i]) ); 								// Compute output
     }
 
 
     /* Resample (decimate) */
-    dsp.resampler = resamp_crcf_create( dsp.resamp_rate, dsp.resamp_filter_delay, dsp.resamp_bw, dsp.resamp_slsl, dsp.resamp_npfb );	// Create resampler
-    resamp_crcf_execute_block( dsp.resampler, dsp.filtered_IQ, dsp.input_length, dsp.resampled_IQ, &(dsp.num_written));     			// Execute resampler
+    resamp_crcf_execute_block( dsp.resampler, dsp.filtered_IQ, dsp.resamp_input_length, dsp.resampled_IQ, &(dsp.resamp_num_written) );  	// Execute resampler
 
 
     /* Time and frequency synchronization */
-    //dsp.symsyncer =
+    symsync_crcf_execute( dsp.symsyncer, dsp.resampled_IQ, dsp.resamp_output_length, dsp.synced_IQ, &(dsp.symsync_num_written) );
 
 
-
-
-
-
-    /* Create symbol synchronizer */
-    //unsigned int nx;            // number of input samples
-    //unsigned int num_written;   // number of values written to buffer
-
-    // ... initialize input, output ...
-
-    // execute symbol synchronizer, storing result in output buffer
-    //symsync_crcf_execute(dsp.symsyncer, x, nx, y, &num_written);
+    /* Demodulation */
+    //uint32_t total_samples = dsp.demod_sampersym * dsp.resamp_output_length;
+    //for ( uint32_t i; i<total_samples; i++ )
+    //{
+    //	gmskdem_demodulate( dsp.demod, dsp.demod_filter_delay, dsp.demod_output_symbol );
+    //}
 
 
 
