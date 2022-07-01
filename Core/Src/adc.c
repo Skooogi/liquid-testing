@@ -28,17 +28,11 @@
 
 uint32_t prim;
 
-/* Instance of ADC data and state struct for ADCI (&hadc1) */
-struct rfadc adcI = {
+/* Instance of ADC data and state struct for both ADC1 and ADC2 (operating in dual mode with ADC1 as master and ADC2 as slave). */
+struct rfadc adcIQ = {
 	.converting = 0,
-	//.dbuf_overrun_error = 0
 };
 
-/* Instance of ADC data and state struct for ADCQ (&hadc2) */
-struct rfadc adcQ = {
-	.converting = 0,
-	//.dbuf_overrun_error = 0
-};
 
 /* Instance of ADC data and state struct for ADCT (&hadc3) */
 struct tempadc adcT = {
@@ -50,24 +44,18 @@ void prvADCInit(TIM_HandleTypeDef *htim)
 {
 	/* Initialize the variables storing the states of the ADCs. */
 
-	adcI.converting = 0;
-	adcQ.converting = 0;
+	adcIQ.converting = 0;
 	adcT.converting = 0;
 
 
-	memset( adcI.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-	memset( adcI.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-	//memset( adcI.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-
-	memset( adcQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-	memset( adcQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-	//memset( adcQ.data_fir, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	memset( adcIQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
+	memset( adcIQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
 
 	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint16_t) );
 
 
 	/* Start RF receiving ADCs. Save data to adcX.rx_buf */
-	/*if ( HAL_ADC_Start_DMA( ADCI, (uint32_t *)adcI.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
+	/*if ( HAL_ADC_Start_DMA( ADCI, (uint32_t *)adcIQ.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
 	{
 		Error_Handler(); //does nothing-> TODO: error handler
 	}
@@ -94,22 +82,46 @@ void prvADCInit(TIM_HandleTypeDef *htim)
 }
 
 
+/* ADC conversion half complete callback */
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc){
+	prim = __get_PRIMASK();
+	__disable_irq();
+
+	if ( hadc == &hadc1 )
+	{
+		for (uint32_t i; i<ADC_RX_BUF_SIZE; i++)
+		{
+
+		}
+		memcpy(adcIQ.data, adcIQ.rx_buf, sizeof(uint32_t)*ADC_RX_BUF_SIZE/2);
+	}
+
+	dsp.processing_request_flag = 1;
+	HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
+	//xTaskNotifyGive( DSPTaskHandle );						// Notify the DSP Task that there are data in need of processing
+
+	if(!prim){
+		__enable_irq();
+	}
+}
+
 /* ADC conversion complete callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 {
 
 	prim = __get_PRIMASK();
 	__disable_irq();
-
-	memcpy(adcI.data, adcI.rx_buf, ADC_RX_BUF_SIZE);
-	memcpy(adcQ.data, adcQ.rx_buf, ADC_RX_BUF_SIZE);
-
-	//adc_val = HAL_ADC_GetValue(&hadc1);
-	//adc_val = HAL_ADC_GetValue(&hadc1);
+	if(hadc == &hadc1)
+	{
+		memcpy(adcIQ.data+ADC_RX_BUF_SIZE/2, adcIQ.rx_buf+ADC_RX_BUF_SIZE/2, sizeof(uint32_t)*ADC_RX_BUF_SIZE/2);
+	}
 
 	dsp.processing_request_flag = 1;
 	HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);
 	//xTaskNotifyGive( DSPTaskHandle );						// Notify the DSP Task that there are data in need of processing
 
+	if(!prim){
+		__enable_irq();
+	}
 }
 

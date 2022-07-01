@@ -10,3 +10,9 @@ startup_stm32h743xx.s
 .cproject
 .cproject.*
 Python/.idea/**
+.metadata/
+.settings/
+.project
+.project.*
+Kvarkensat Debug.launch
+Kvarkensat.launch

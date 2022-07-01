@@ -36,16 +36,13 @@
 typedef struct rfadc {
 
 	uint8_t converting;													// Flag to tell whether the ADC is in the middle of conversions or not
-	ALIGN_32BYTES ( uint16_t rx_buf[ADC_RX_BUF_SIZE] );
-	ALIGN_32BYTES ( int16_t data[ADC_RX_BUF_SIZE] );
+	ALIGN_32BYTES ( uint32_t rx_buf[ADC_RX_BUF_SIZE] );					// This buffer is only needed for ADC1 (in multimode ADC operations, converted data of both ADC1 and ADC2 are stored in the result register of ADC1)
+	ALIGN_32BYTES ( int32_t data[ADC_RX_BUF_SIZE] );
 
 } *rfadc_t;
 
-/* Declare the extern structs adcI and adcQ. */
-extern struct rfadc adcI;
-extern struct rfadc adcQ;
-
-
+/* Declare the extern structs adcIQ and adcQ. */
+extern struct rfadc adcIQ;
 
 /* Struct for storing the state of the MCU temperature measuring ADC */
 typedef struct tempadc {

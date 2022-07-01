@@ -79,7 +79,7 @@ void prvGMSKDemodulate(uint32_t startflag,  uint32_t endflag, int16_t *demodulat
 	/* Demodulation */
 	/*for(uint32_t i = startflag; i < endflag; i++)
 	{
-		temp_I = -(float64_t)(adcI.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
+		temp_I = -(float64_t)(adcIQ.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
 		temp_Q = -(float64_t)(adcQ.data_fir[i]) / UINT16_OFFSET;		// cast int16 value to float64_t	TODO: What is done here
 
 		complex_data = (temp_I + (temp_Q * _Complex_I));
@@ -241,15 +241,17 @@ static void prvDSPPipeline()
 
 
 
-	/* Remove DC spike from the data. */
-	prvSubtractMean( adcI.data, ADC_RX_BUF_SIZE );
-	prvSubtractMean( adcQ.data, ADC_RX_BUF_SIZE );
-
 	/* Interleave the I and Q signals to one single complex IQ array. */
 	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i++)
 	{
-		dsp.raw_IQ[i] = adcI.data[i] + adcQ.data[i]*I;
+		// ADC dualmode sampling stores both I and Q samples in same buffer as single 32 bit value (2*16 bits) so they have to be separated
+		int16_t I_value = adcIQ.data[i] & 0x00FF;					// TODO: Check that the correct bytes are taken (endianness etc.)
+		int16_t Q_value = (adcIQ.data[i] >> 16) & 0x00FF;			// TODO: Check that the correct bytes are taken (endianness etc.)
+		dsp.raw_IQ[i] = I_value + Q_value*I;
 	}
+
+	/* Remove DC spike from the data. */
+	prvSubtractMean( dsp.raw_IQ, ADC_RX_BUF_SIZE );
 
 
 	/* Assume channel. TODO: Use fft to find on which channel there is a signal (or is there any signal on the right channels at all) */
@@ -286,7 +288,7 @@ static void prvDSPPipeline()
     resamp_crcf_execute_block( dsp.resampler, dsp.filtered_IQ, dsp.input_length, dsp.resampled_IQ, &(dsp.num_written));     			// Execute resampler
 
 
-    /* Time synchronization */
+    /* Time and frequency synchronization */
     //dsp.symsyncer =
 
 
@@ -330,7 +332,7 @@ static void prvDSPPipeline()
 	{
 		for(uint32_t j=0; j < FFT_SIZE*2; j++)		// Interleaving
 		{
-			dsp.fft_buf[j] = adcI.data[i+j] + adcQ.data[i+j]*I;
+			dsp.fft_buf[j] = adcIQ.data[i+j] + adcQ.data[i+j]*I;
 		}
 	}*/
 
@@ -367,7 +369,7 @@ static void prvDSPPipeline()
 			  dsp.radians = 2 * M_PI * i * dsp.mix_freq / ((float32_t)ADC_SAMPLERATE);
 			  // TODO: cosine for I data
 			  dsp.sine_value = arm_sin_f32(dsp.radians); 								// Move to positive values only TODO: What does this comment mean?
-			  adcI.data[i] =(adcI.data[i])*dsp.sine_value;	// TODO: float
+			  adcIQ.data[i] =(adcIQ.data[i])*dsp.sine_value;	// TODO: float
 			  adcQ.data[i] =(adcQ.data[i])*dsp.sine_value;	// TODO: float
 		}
 	}*/
@@ -375,7 +377,7 @@ static void prvDSPPipeline()
 	/* Lowpass filter both I and Q data */
 	/*for(uint32_t i=0; i < NUM_BLOCKS; i++)
 	{
-		arm_fir_q15(&(filters.fir1), adcI.data+i*BLOCK_SIZE, adcI.data_fir+i*BLOCK_SIZE, BLOCK_SIZE);
+		arm_fir_q15(&(filters.fir1), adcIQ.data+i*BLOCK_SIZE, adcIQ.data_fir+i*BLOCK_SIZE, BLOCK_SIZE);
 	}
 	for(int i=0; i < NUM_BLOCKS; i++)
 	{

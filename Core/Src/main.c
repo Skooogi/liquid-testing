@@ -108,6 +108,7 @@ uint8_t ubKeyNumber = 0x0;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+void PeriphCommonClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_FDCAN1_Init(void);
@@ -117,8 +118,8 @@ static void MX_SPI2_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC3_Init(void);
 static void MX_ADC2_Init(void);
-static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
+static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 void PeriphCommonClock_Config(void);								// CubeMX did not generate this :(
@@ -161,6 +162,7 @@ static void pvrInitBoard() {
 
 	HAL_Init();
 	SystemClock_Config();
+	PeriphCommonClock_Config();
 	MX_GPIO_Init();
 	MX_DMA_Init();
 	MX_FDCAN1_Init();
@@ -171,6 +173,7 @@ static void pvrInitBoard() {
 	MX_ADC3_Init();
 	MX_ADC2_Init();
 	MX_TIM1_Init();
+	MX_TIM2_Init();
 	SEGGER_RTT_Init();
 	printf("\nConfiguring radio..\n");
 	configureRadio();
@@ -185,15 +188,17 @@ static void pvrInitBoard() {
 	  if(HAL_ADCEx_Calibration_Start(ADCQ, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
 	                Error_Handler();*/
 
+
 	  // Start ADCs in interrupt mode
-	  if(HAL_ADC_Start_DMA(ADCI, (uint32_t*)adcI.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+	  if(HAL_ADCEx_MultiModeStart_DMA(ADCI, (uint32_t*)adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
 	                Error_Handler();
-	  if(HAL_ADC_Start_DMA(ADCQ, (uint32_t*)adcQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+	  //if(HAL_ADCEx_MultiModeStart_DMA(ADCQ, (uint32_t*)adcQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+	                //Error_Handler();
+
+	  // Start TIM2 in output compare mode
+	  if(HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)	// At least the timer starts and triggers interrupts. Interrupts probably are not needed in the end.
 	                Error_Handler();
 
-	  // Start PWM generation
-	  if(HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1) != HAL_OK)
-	                Error_Handler();
 
 
 }
@@ -297,8 +302,8 @@ int main(void)
   MX_ADC3_Init();
   MX_ADC2_Init();
   MX_USB_DEVICE_Init();
-  MX_TIM1_Init();
   MX_TIM2_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
 
@@ -377,34 +382,6 @@ void SystemClock_Config(void)
   }
 }
 
-
-/**
-  * @brief Peripherals Common Clock Configuration
-  * @retval None
-  */
-void PeriphCommonClock_Config(void)									// CubeMX did not generate this :(
-{
-  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-
-  /** Initializes the peripherals clock
-  */
-  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_ADC;
-  PeriphClkInitStruct.PLL3.PLL3M = 1;
-  PeriphClkInitStruct.PLL3.PLL3N = 18;
-  PeriphClkInitStruct.PLL3.PLL3P = 3;
-  PeriphClkInitStruct.PLL3.PLL3Q = 2;
-  PeriphClkInitStruct.PLL3.PLL3R = 2;
-  PeriphClkInitStruct.PLL3.PLL3RGE = RCC_PLL2VCIRANGE_3;
-  PeriphClkInitStruct.PLL3.PLL3VCOSEL = RCC_PLL2VCOMEDIUM;
-  PeriphClkInitStruct.PLL3.PLL3FRACN = 6144;
-  PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL3;
-  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
-}
-
-
 /**
   * @brief ADC1 Initialization Function
   * @param None
@@ -459,7 +436,7 @@ static void MX_ADC1_Init(void)
   */
   sConfig.Channel = ADC_CHANNEL_3;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_16CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_1CYCLE_5;
   sConfig.SingleDiff = ADC_DIFFERENTIAL_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
@@ -830,7 +807,7 @@ static void MX_TIM1_Init(void)
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
 
   /* USER CODE BEGIN TIM1_Init 1 */
-
+  // tim clock 240 MHz
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
   htim1.Init.Prescaler = 0;
@@ -904,6 +881,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 0 */
 
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
 
@@ -913,10 +891,19 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 0;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 833;
+  htim2.Init.Period = 833-1;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_PWM_Init(&htim2) != HAL_OK)
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  if (HAL_TIM_OC_Init(&htim2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -926,11 +913,11 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.OCMode = TIM_OCMODE_TIMING;
   sConfigOC.Pulse = 0;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -1144,7 +1131,31 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+/**
+  * @brief Peripherals Common Clock Configuration
+  * @retval None
+  */
+void PeriphCommonClock_Config(void)
+{
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
+  /** Initializes the peripherals clock
+  */
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_ADC;
+  PeriphClkInitStruct.PLL2.PLL2M = 1;
+  PeriphClkInitStruct.PLL2.PLL2N = 18;
+  PeriphClkInitStruct.PLL2.PLL2P = 3;
+  PeriphClkInitStruct.PLL2.PLL2Q = 2;
+  PeriphClkInitStruct.PLL2.PLL2R = 2;
+  PeriphClkInitStruct.PLL2.PLL2RGE = RCC_PLL2VCIRANGE_3;
+  PeriphClkInitStruct.PLL2.PLL2VCOSEL = RCC_PLL2VCOMEDIUM;
+  PeriphClkInitStruct.PLL2.PLL2FRACN = 6144;
+  PeriphClkInitStruct.AdcClockSelection = RCC_ADCCLKSOURCE_PLL2;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
 
 /* USER CODE END 4 */
 
@@ -1159,7 +1170,9 @@ static void MX_GPIO_Init(void)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
+  if (htim->Instance == TIM2) {
+	HAL_GPIO_TogglePin(GPIOB, CANLED_Pin);;
+  }
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM7) {
     HAL_IncTick();
@@ -1177,7 +1190,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
+  //__disable_irq();
   while (1)
   {
   }
