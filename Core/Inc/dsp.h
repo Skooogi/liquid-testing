@@ -19,13 +19,15 @@
 #define BLOCK_SIZE         				64
 #define NUM_BLOCKS 						ADC_RX_BUF_SIZE/BLOCK_SIZE/2
 
-#define SAMPLES_PER_SYMBOL				3
 #define SYMBOLRATE						9600.0f
+#define SAMPLES_PER_SYMBOL				ADC_SAMPLERATE/SYMBOLRATE
 
-#define AIS_PACKAGE_MAX_LENGHT			256							// bits
+#define AIS_MAX_PACKAGE_LENGTH			256							// bits
 #define AIS_PREAMBLE_LENGTH				24							// bits
 #define AIS_START_END_FLAG_LENGTH		8							// bits
-#define AIS_MAX_PAYLOAD_LENGTH			168							// bits
+#define AIS_MAX_PAYLOAD_BITS			168							// bits
+#define AIS_BITS_PER_CHAR				6
+
 
 #define SNR_THRESHOLD_F32    			75.0f
 
@@ -66,12 +68,13 @@ struct symsync {
     unsigned int num_written;										// number of values written to buffer
 };
 
-/* A struct to store symbol synchronizer (symsync) object options . */
+/* A struct to store GMSK demodulator (gmskdem) object options . */
 struct demod {
     gmskdem demod;													// GMSK demodulator object
     uint32_t sampersym;    											// filter samples/symbol
     uint32_t filter_delay;    										// filter delay (symbols)
     float BT;    													// bandwidth-time product
+    uint32_t output_length;											// Length of output array of 1s and 0s
 };
 
 /* Struct for storing all DSP related options, variables and data. */
@@ -81,14 +84,21 @@ typedef struct dsp {
 	uint8_t processing_request_flag;
 	uint32_t batch_sn;
 	uint32_t frame_counter;
-	float downmix_freq;
+
+	/* These are for fft frequency detection implementation
+	complex float fft_buf[FFT_SIZE*2];
+	complex float fft_mag_buf[FFT_SIZE*2];
+	complex float fft_max_mag;
+	uint32_t fft_max_mag_idx;
+	*/
+	float mix_freq;
 
 	/* Arrays to store intermediate results. */
 	complex float raw_IQ[ADC_RX_BUF_SIZE];
 	complex float filtered_IQ[ADC_RX_BUF_SIZE];
 	complex float *resampled_IQ;
 	complex float *synced_IQ;
-    unsigned int *demod_output;
+    unsigned int *demodulated_data;
 
     /* Structs for storing options of the liquid-dsp objects used. */
     struct filter fr;												// Filter object options
@@ -96,38 +106,13 @@ typedef struct dsp {
     struct symsync ss;												// Symbol synchronizer object options
     struct demod dm;												// GMSK demodulator object options
 
-    //
-    //
-    //
-    //
-    //
-
-	// All below this is the old implementation, stored only for reference in development phase.
-	complex float raw_complex_data[ADC_RX_BUF_SIZE];
-	complex float demodulated_IQ[ADC_RX_BUF_SIZE];
-
-	complex float fft_max_mag;
-	uint32_t fft_max_mag_idx;
-	float32_t mix_freq;
-
-	complex float fft_buf[FFT_SIZE*2];
-	complex float fft_mag_buf[FFT_SIZE*2];
-
-	complex float processed_data[ADC_RX_BUF_SIZE];
-	complex float decimated_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR];
-	complex float digitized_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR];
-
+    /* Frame detection and payload extraction related stuff. */
+    int32_t start_flag_end;
 	uint32_t stuffed_payload_length;
-	uint8_t unstuffed_payload[AIS_MAX_PAYLOAD_LENGTH];
-	uint32_t unstuffed_payload_length;
-
-	uint8_t	decoded_data[ADC_RX_BUF_SIZE/DECIMATION_FACTOR/6];
-
-	//
-	//
-	//
-	//
-	//
+	uint8_t decoded_payload[AIS_MAX_PAYLOAD_BITS];
+	uint32_t decoded_payload_length;
+	uint8_t message[AIS_MAX_PAYLOAD_BITS/AIS_BITS_PER_CHAR];
+	uint32_t message_length;
 
 } *dsp_t;
 
