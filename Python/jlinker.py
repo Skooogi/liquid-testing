@@ -47,7 +47,7 @@ print(f"RTT down-buff Q desc: {jlink.rtt_get_buf_descriptor(2, False)}")
 #
 # VARIABLES TO MODIFY, especially 'samples', 'bytes_per_int' might screw everything
 #
-samples = 200                                      # How many samples are processed per loop.
+samples = 100                                      # How many samples are processed per loop.
 sleeptime = 10                                      # How long a loop sleeps after sending data.
 bytes_per_int = 2                                   # as per int16_t now, should be float though
 i_data = lil_endian.txt_reader("hI.txt")            # Saved signal from .txt file
@@ -72,18 +72,18 @@ while True:
     else:
         send_sams = int(user)
 
-    last_idx = send_sams*bytes_per_int - 1
+    last_idx = send_sams*bytes_per_int - 1 + 1  # One sacrificial byte must be sent to be missed by RTT read.
     i_bytes = lil_endian.bytes_from_data(i_data, bytes_per_int, False)
     q_bytes = lil_endian.bytes_from_data(q_data, bytes_per_int, False)
     # print(f"I data as bytes: {i_bytes[0:last_idx]}")
     # print(f"Q data as bytes: {q_bytes[0:last_idx]}")
-    print(f"Sending {send_sams} samples, {last_idx+1} bytes")
+    print(f"Sending {send_sams} samples, {last_idx+1} bytes (one byte as sacrifice)")
     jlink.rtt_write(1, i_bytes[0:last_idx])  # write data (as bytes) to RTT down-buffer '1'
     jlink.rtt_write(2, q_bytes[0:last_idx])  # write data (as bytes) to RTT down-buffer '2'
 
     print(f"Sent data. Sleeping..")
     time.sleep(sleeptime)
-    print("Slept for {sleeptime} seconds. New loop..")
+    print(f"Slept for {sleeptime} seconds. New loop..")
 
     time.sleep(0.5)             # sleep atleast for half a second
 
