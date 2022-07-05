@@ -48,11 +48,13 @@ print(f"RTT buff descrips: {jlink.rtt_get_buf_descriptor(1,True)}")
 print(f"RTT buff descrips: {jlink.rtt_get_buf_descriptor(1,False)}")
 # Loop for reading the data from RTT up-buffer '1'
 while True:
-    user = input("READ RTT buffer readings? a(all) or x(int) or n(exit): ")
+    # Ask user what to do in loop
+    user = input("READ RTT buffer readings? a(all) or x(int) or q(quit): ")
     data = []
-    # User input 'n' closes RTT session and stops execution of script
-    if user == 'n':
-        # jlink.rtt_stop()
+
+    # User input 'q' closes RTT session and stops execution of script
+    if user == 'q' or user == 'quit' or user == 'n':
+        jlink.rtt_stop()
         print("Stopping execution.")
         exit()
 

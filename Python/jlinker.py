@@ -13,10 +13,15 @@ import matplotlib.pyplot as plt
 
 import lil_endian       # simple func. flips and parses the read data bytes
 
-
-serial_num = 801003397  # either JLink or device specific (not sure, but works)
+#
+# VARIABLES TO MODIFY; Especially 'samples', 'bytes_per_int', although they are only DEFAULTS
+#                      that will be used if values are not read from target device in initialization.
+#
+samples = 100                       # How many samples are processed per loop. DEFAULT
+sleeptime = 10                      # How long a loop sleeps after sending data.
+bytes_per_int = 2                   # as per int16_t now, should be float though. DEFAULT
+serial_num = 801003397              # either JLink or device specific (not sure, but works)
 tgt_device = 'STM32H743ZI'
-bytes_per_int = 2       # Bytes per in one integer of data. int_16 = 2. uint_32 = 4.
 
 # Initiate JLink session and print session info.
 jlink = pylink.JLink()
@@ -39,59 +44,74 @@ if user != 'y':     # User stops execution if they don't initiate RTT
     exit()
 jlink.rtt_start()
 print(f"RTT start")
-print(f"RTT satus: {jlink.rtt_get_status()}")       # intended typo
+print(f"RTT satus: {jlink.rtt_get_status()}")       # check RTT status, note intended typo
 
-print(f"RTT down-buff I desc: {jlink.rtt_get_buf_descriptor(1, False)}")
-print(f"RTT down-buff Q desc: {jlink.rtt_get_buf_descriptor(2, False)}")
-
-#
-# VARIABLES TO MODIFY, especially 'samples', 'bytes_per_int' might screw everything
-#
-samples = 100                                      # How many samples are processed per loop.
-sleeptime = 10                                      # How long a loop sleeps after sending data.
-bytes_per_int = 2                                   # as per int16_t now, should be float though
 i_data = lil_endian.txt_reader("hI.txt")            # Saved signal from .txt file
 q_data = lil_endian.txt_reader("hQ.txt")            # Saved signal from .txt file
 total_data = len(i_data)                            # Total data length to keep cycling data in loop
 
-print(f"I data read from txt: {i_data[0:9]}..")
-print(f"Q data read from txt: {q_data[0:9]}..")
+# Read the 'specs' for RTT communication.
+# Specs being number of samples to send at a time and how many bytes/sample.
+specs_bytes = jlink.rtt_read(3, 4)
+if len(specs_bytes) >= 3:
+    specs = lil_endian.byte_parser(specs_bytes, bytes_per_int, False)
+    samples = specs[0]
+    bytes_per_int = specs[1]
+    print(f"RECEIVED sample len: {samples} & bytes/int: {bytes_per_int}")
+else:
+    print(f"Using DEFAULT sample len: {samples} & bytes/int: {bytes_per_int}")
+
 # Current implementation is a loop that sends test signal to RTT,
 # sleeps for while (as DSP happens on µC), and then tries to read
 # what the µC is sending back.
-# Should maybe be done with threads instead.
+# Could maybe be done with threads instead.
 while True:
-    user = input(f"SEND {samples} data smpls to RTT buffer? a(all) or x(int) or n(exit): ")
-    # User input 'n' closes RTT session and stops execution of script
-    if user == 'n':
+    # Ask user what to do in loop
+    user = input(f"SEND {samples} data smpls to RTT buffer? a(all) or x(int) or q(quit): ")
+
+    # User input 'q' closes RTT session and stops execution of script
+    if user == 'q' or user == 'quit' or user == 'n':
         jlink.rtt_stop()
-        print("Stopping execution.")
+        print("Stopping execution.\n")
         exit()
+
+    # User input 'a' sends the maximum specified sample length
     if user == 'a' or user == "all":
         send_sams = samples
-    else:
-        send_sams = int(user)
 
+    # Other user inputs are interpreted as the number of samples t
+    else:
+        if int(user) >= samples:
+            print("Over max samples RTT is configured to handle")
+            send_sams = samples
+        else:
+            send_sams = int(user)
+
+    #
+    # SEND DATA:
+    # 1.calculate last idx; 2.convert data to bytes; 3.write data to RTT buffer
+    #
     last_idx = send_sams*bytes_per_int - 1 + 1  # One sacrificial byte must be sent to be missed by RTT read.
     i_bytes = lil_endian.bytes_from_data(i_data, bytes_per_int, False)
     q_bytes = lil_endian.bytes_from_data(q_data, bytes_per_int, False)
-    # print(f"I data as bytes: {i_bytes[0:last_idx]}")
-    # print(f"Q data as bytes: {q_bytes[0:last_idx]}")
     print(f"Sending {send_sams} samples, {last_idx+1} bytes (one byte as sacrifice)")
-    jlink.rtt_write(1, i_bytes[0:last_idx])  # write data (as bytes) to RTT down-buffer '1'
-    jlink.rtt_write(2, q_bytes[0:last_idx])  # write data (as bytes) to RTT down-buffer '2'
+    jlink.rtt_write(1, i_bytes[0:last_idx])     # write data (as bytes) to RTT down-buffer '1'
+    jlink.rtt_write(2, q_bytes[0:last_idx])     # write data (as bytes) to RTT down-buffer '2'
 
     print(f"Sent data. Sleeping..")
     time.sleep(sleeptime)
     print(f"Slept for {sleeptime} seconds. New loop..")
 
-    time.sleep(0.5)             # sleep atleast for half a second
-
+    #
+    # READ DATA:
+    # 1.read rtt buffers; 2.convert bytes to data samples
+    #
     read_bytes_i = jlink.rtt_read(1, samples * bytes_per_int)               # Read I data from RTT buffer '1'
     read_bytes_q = jlink.rtt_read(2, samples * bytes_per_int)               # Read Q data from RTT buffer '2'
     read_i = lil_endian.byte_parser(read_bytes_i, bytes_per_int, False)     # Bytes to integers
     read_q = lil_endian.byte_parser(read_bytes_q, bytes_per_int, False)     # Bytes to integers
 
+    #
     # PLOTTING
     # I data first
     sample_idxs = np.arange(1, len(read_i) + 1)  # 'samples' gives indexes to read data
@@ -108,5 +128,6 @@ while True:
     plt.ylabel("RTT Data [unit]")
     plt.title(f"Q data from RTT, {len(read_q)} samples")
 
+    print("Show plots..")
     plt.show()
-
+    # After closing plots, go for a new user initiated loop
