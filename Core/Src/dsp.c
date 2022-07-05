@@ -43,7 +43,7 @@ void prvDSPInit()
     dsp.rs.npfb = 32;       																											// number of filters in bank (timing resolution)
     dsp.rs.input_length = ADC_RX_BUF_SIZE + dsp.rs.filter_delay;																		// total length of resampler input
     dsp.rs.output_length = ceilf(dsp.rs.rate * dsp.rs.input_length);																	// resampler output length ("zero padded" to incorporate filter delay)
-    dsp.resampled_IQ = malloc( dsp.rs.output_length * sizeof(complex float) );																					// Allocate memory for the resampled
+    dsp.resampled_IQ = malloc( dsp.rs.output_length * sizeof(complex float) );															// Allocate memory for the resampled
     dsp.rs.num_written = 0;   																											// number of values written to buffer
     dsp.rs.resampler = resamp_crcf_create( dsp.rs.rate, dsp.rs.filter_delay, dsp.rs.bw, dsp.rs.slsl, dsp.rs.npfb );						// Create resampler
 
@@ -53,7 +53,7 @@ void prvDSPInit()
     dsp.ss.beta = 0.3f;  																												// filter excess bandwidth factor
     dsp.ss.npfb  = 32;    																												// number of polyphase filters in bank
     dsp.ss.ftype = LIQUID_FIRFILT_GMSKRX; 																								// filter type
-    dsp.synced_IQ = malloc( dsp.rs.output_length * sizeof(complex float) );																						// Same length as dsp.resampled_IQ
+    dsp.synced_IQ = malloc( dsp.rs.output_length * sizeof(complex float) );																// Same length as dsp.resampled_IQ
     dsp.ss.num_written = 0;   																											// number of values written to buffer
     dsp.ss.symsyncer = symsync_crcf_create_rnyquist( dsp.ss.ftype, dsp.ss.sampersym, dsp.ss.filter_delay, dsp.ss.beta, dsp.ss.npfb );	// Create symbol synchronizer
 
@@ -62,11 +62,12 @@ void prvDSPInit()
     dsp.dm.filter_delay = dsp.ss.filter_delay;    																						// filter delay (symbols)
     dsp.dm.BT = 0.25f;    																												// bandwidth-time product
     dsp.dm.output_length = ceil(dsp.rs.output_length/(float)SAMPLES_PER_SYMBOL) + AIS_MAX_PAYLOAD_BITS;									// The output length is
-    dsp.demodulated_data = malloc( dsp.dm.output_length * sizeof(unsigned int) );																			// Demodulation output is stored with offset of maximum AIS message lenght
+    dsp.demodulated_data = malloc( dsp.dm.output_length * sizeof(unsigned int) );														// Demodulation output is stored with offset of maximum AIS message lenght
     dsp.dm.demod = gmskdem_create( dsp.dm.sampersym, dsp.dm.filter_delay, dsp.dm.BT );													// Create demod object
 
-    /* Misc TODO: <--- Bad name */
-    dsp.start_flag_end = -1;
+    /* decoder init (decoder is not a liquid-dsp object) */
+    prvDecoderInit();
+
 }
 
 
@@ -84,129 +85,10 @@ static void prvSubtractMean(complex float *data, uint32_t data_length)
 	}
 
 	for(uint32_t i=0; i< ADC_RX_BUF_SIZE; i++) {
-		data[i] -= (real_mean + imag_mean*I);																												// subtract mean from each element in array
+		data[i] -= (real_mean + imag_mean*I);						// subtract mean from each element in array
 	}
 
 }
-
-
-/* Detect AIS message preamble */
-static uint32_t prvDetectPreamble(unsigned int *data)
-{
-	uint32_t preamble_found = 1;
-
-	if ( data[0] == data[1] )										// Check if first "bits" are equal
-	{
-		for ( uint32_t i=2; i<AIS_PREAMBLE_LENGTH; i+=2 )
-		{
-			if ( (data[i] != data[i-2]) && (data[i] == data[i+1]) )		// Check that the current "bit" is equal to the next but different from the (two) previous
-			{
-				continue;
-			}
-			else													// The "bits" did not represent a preamble, break out of loop and return 0.
-			{
-				preamble_found = 0;
-				break;
-			}
-		}
-	}
-	else
-	{
-		preamble_found = 0;
-	}
-	return preamble_found;
-}
-
-
-/* Detect AIS message start or end flag */
-static uint32_t prvDetectStartOrEndFlag(unsigned int *data)
-{
-	uint32_t flag_found = 1;
-	uint32_t i;
-
-	for ( i=1; i<AIS_START_END_FLAG_LENGTH-1; i++ )				// Must check the last bit separately as it should be different
-	{
-		if ( data[i] == data[i-1] )
-		{
-			continue;
-		}
-		else
-		{
-			flag_found = 0;
-			dsp.start_flag_end = -1;
-			return flag_found;
-		}
-	}
-	if ( data[i] == data[i-1] )
-	{
-		dsp.start_flag_end = -1;
-		flag_found = 0;
-	}
-	dsp.start_flag_end = data[i];
-	return flag_found;
-}
-
-
-/* Decode AIS message payload */
-static void prvPayloadDecode(unsigned int *data, uint32_t payload_start_idx)
-{
-	uint32_t consecutive_ones = 0;		// Count how many consecutive ones have been encountered in the data
-	uint32_t num_removed_bits = 0;		// How many bits have been removed (destuffed)
-	uint32_t decoded_idx = 0;			// Current index of the unstuffed data buffer
-	for ( uint32_t i = payload_start_idx; i < payload_start_idx + dsp.stuffed_payload_length; i++ )
-	{
-
-		if ( data[i] == data[i-1] )			// It's okay to go one step back from the "first index" when i==payload_start_idx, since we need to check the level of the last it of the start flag.
-		{
-			dsp.decoded_payload[i] = 1;		// Value same as previous --> found 1
-			consecutive_ones++;
-			if (consecutive_ones > 4)
-			{
-				i++;						// Skip the stuffing 0
-				num_removed_bits++;			// Increment the removed bits counter
-				consecutive_ones = 0;		// Reset the counter of consecutive ones
-				continue;
-			}
-		}
-		else
-		{
-			dsp.decoded_payload[i] = 0;		// Value not same as previous --> found 0
-			consecutive_ones = 0;
-		}
-		decoded_idx++;
-	}
-	dsp.decoded_payload_length = dsp.stuffed_payload_length - num_removed_bits;
-}
-
-
-/* Take an array of 1s and 0s and convert it to actual binary bytes of data */
-static void prvBitArrayToBinary(uint32_t array_length)
-{
-	/* Check that the number of payload bits is a multiple of 6 (AIS message consists of 6 bit chars) */
-	if ( !(array_length % 6) )
-	{
-		Error_Handler();			// TODO: Do something in the error hander
-	}
-	dsp.decoded_payload_length = 0;
-	/* Convert digitized data from array of "bits" to bytes */
-	uint8_t byte = 0;
-	uint8_t j;
-	for ( uint32_t i=0; i < array_length; i+=6 )
-	{
-		for( j=i; j<(i+6); ++j )								// Characters in AIS payload are 6 bits long
-		{
-			if( dsp.decoded_payload[j] == 1 ) byte |= 1 << (7-j);
-		}
-		dsp.decoded_payload[j] = byte;
-		byte = 0;
-		dsp.decoded_payload_length++;
-	}
-}
-
-
-
-
-
 
 
 /* Function taking care of the complete DSP pipeline from raw data to a decoded signal
@@ -314,30 +196,47 @@ static void prvDSPPipeline()
 
 
     /* Frame detection: Look for preamble, start flag, and end flag. Determine payload length and destuff payload data. */
-	for (uint32_t i=0; i< - AIS_MAX_PACKAGE_LENGTH; i++)
+	for ( uint32_t i=0; i<dsp.dm.output_length; i++ )
 	{
-		/* If true, then preamble found */
-		if ( prvDetectPreamble(dsp.demodulated_data + i) )
+		if ( !dsp.dr.preamble_found )						// If preamble is not found, look for that
 		{
+			prvDetectPreamble( dsp.demodulated_data[i] );
+		}
+		else if ( !dsp.dr.startflag_found )					// If preamble is found but the start flag is not found, look for that
+		{
+			prvDetectStartFlag( dsp.demodulated_data[i] );
+		}
+		else if ( !dsp.dr.endflag_found )					// If preamble and start flag are found but the end flag is not found, look for that
+		{
+			prvDetectEndFlag( dsp.demodulated_data[i] );
+		}
+		else if ( dsp.dr.endflag_found )					// If preamble, start flag, and end flag are found, decode the acquired payload
+		{
+			prvPayloadDecode( dsp.dr.encoded_payload );
+		}
+
+		/* If true, then preamble found */
+		//if ( prvDetectPreamble(dsp.demodulated_data[i]) )
+		//{
 			/* If true, then start flag found */
-			if ( prvDetectStartOrEndFlag(dsp.demodulated_data + i + AIS_PREAMBLE_LENGTH) )
-			{
+			//if ( prvDetectStartOrEndFlag(dsp.demodulated_data + i + AIS_PREAMBLE_LENGTH) )
+			//{
 				/* Iterate over the possible payload and look for end flag */
-				for ( dsp.stuffed_payload_length=0; dsp.stuffed_payload_length<=AIS_MAX_PAYLOAD_BITS; dsp.stuffed_payload_length++ )
-				{
+				//for ( dsp.dr.encoded_payload_length=0; dsp.dr.encoded_payload_length<=AIS_MAX_PAYLOAD_BITS; dsp.dr.encoded_payload_length++ )
+				//{
 					/* If true, end flag detected, stop counting */
-					if ( prvDetectStartOrEndFlag(dsp.demodulated_data + i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH) )
-					{
-						break;
-					}
-				}
+					//if ( prvDetectStartOrEndFlag(dsp.demodulated_data + i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH) )
+					//{
+					//	break;
+					//}
+				//}
 				/* Decode the payload */
-				prvPayloadDecode( dsp.demodulated_data, i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH );
+				//prvPayloadDecode( dsp.demodulated_data, i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH );
 
 				/* Bitshift the 1s and 0s to bytes */
-				prvBitArrayToBinary( dsp.decoded_payload_length );
-			}
-		}
+				//prvBitArrayToBinary( dsp.dr.decoded_payload_length );
+			//}
+		//}
 	}
 }
 
