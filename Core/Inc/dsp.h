@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include "adc.h"
+#include "decoder.h"
 #include "math.h"
 #include "complex.h"
 #include "arm_math.h"
@@ -22,14 +23,6 @@
 #define SYMBOLRATE						9600.0f
 #define SAMPLES_PER_SYMBOL				ADC_SAMPLERATE/SYMBOLRATE
 
-#define AIS_MAX_PACKAGE_LENGTH			256							// bits
-#define AIS_PREAMBLE_LENGTH				24							// bits
-#define AIS_START_END_FLAG_LENGTH		8							// bits
-#define AIS_MAX_PAYLOAD_BITS			168							// bits
-#define AIS_BITS_PER_CHAR				6
-
-
-#define SNR_THRESHOLD_F32    			75.0f
 
 
 /* A struct to store filter (firfilt) object options. */
@@ -106,13 +99,10 @@ typedef struct dsp {
     struct symsync ss;												// Symbol synchronizer object options
     struct demod dm;												// GMSK demodulator object options
 
-    /* Frame detection and payload extraction related stuff. */
-    int32_t start_flag_end;
-	uint32_t stuffed_payload_length;
-	uint8_t decoded_payload[AIS_MAX_PAYLOAD_BITS];
-	uint32_t decoded_payload_length;
-	uint8_t message[AIS_MAX_PAYLOAD_BITS/AIS_BITS_PER_CHAR];
-	uint32_t message_length;
+    /* Struct for storing options of the decoder object. */
+    struct decoder dr;
+
+    /* Flag telling whether there is a prospective AIS message being decoded. If this is set, do not change channel */
 
 } *dsp_t;
 
@@ -120,7 +110,7 @@ typedef struct dsp {
 extern struct dsp dsp;
 
 /* Declare DSP Task handle */
-//extern TaskHandle_t DSPTaskHandle;
+extern TaskHandle_t DSPTaskHandle;
 
 
 /************* Publicly callable functions *************/
