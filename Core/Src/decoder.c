@@ -5,6 +5,7 @@
 
 #include "decoder.h"
 #include "main.h"
+#include "crc.h"
 
 /* Instance of the decoder to extract and decode AIS messages from the stream of input data. */
 struct decoder dr =
@@ -207,17 +208,17 @@ void prvDetectEndFlag( unsigned int sample )
 }
 
 
-/* Decode AIS message payload */
-void prvPayloadDecode( uint32_t *data )
+/* Decode and extract AIS message payload and corresponding CRC-16.  */
+void prvPayloadAndCRCDecode()
 {
 	uint32_t consecutive_ones = 0;																	// Count how many consecutive ones have been encountered in the data
 	uint32_t num_removed_bits = 0;																	// How many bits have been removed (destuffed)
 	uint32_t decoded_idx = 0;																		// Current index of the unstuffed data buffer
-	/* Extract encoded data */
-	for ( uint32_t i=0; i<dr.encoded_payload_length - AIS_CRC_LENGTH; i++ )	// TODO: This might not actually be true because of stuffing bits. Fix it!!
+	/* Extract and decode data */
+	for ( uint32_t i=0; i<dr.encoded_payload_length; i++ )											// Extract the whole payload (including CRC)
 	{
 
-		if ( data[i] == data[i-1] )																	// It's okay to go one step back from the "first index" when i==payload_start_idx, since we need to check the level of the last it of the start flag.
+		if ( dr.encoded_payload[i] == dr.encoded_payload[i-1] )																	// It's okay to go one step back from the "first index" when i==payload_start_idx, since we need to check the level of the last it of the start flag.
 		{
 			dr.decoded_payload[decoded_idx] = 1;													// Value same as previous --> found 1
 			consecutive_ones++;
@@ -238,89 +239,66 @@ void prvPayloadDecode( uint32_t *data )
 	}
 	dr.decoded_payload_length = dr.encoded_payload_length - num_removed_bits;
 
-	/* Extract encoded CRC-16 */
-	for ( uint32_t i=0; i<dr.encoded_payload_length - AIS_CRC_LENGTH; i++ )
-	{
-
-		if ( data[i] == data[i-1] )																	// It's okay to go one step back from the "first index" when i==payload_start_idx, since we need to check the level of the last it of the start flag.
-		{
-			dr.decoded_payload[decoded_idx] = 1;													// Value same as previous --> found 1
-			consecutive_ones++;
-			if (consecutive_ones > 4)
-			{
-				i++;																				// Skip the stuffing 0
-				num_removed_bits++;																	// Increment the removed bits counter
-				consecutive_ones = 0;																// Reset the counter of consecutive ones
-				continue;
-			}
-		}
-		else
-		{
-			dr.decoded_payload[decoded_idx] = 0;													// Value not same as previous --> found 0
-			consecutive_ones = 0;																	// Reset the counter of consecutive ones
-		}
-		decoded_idx++;
-	}
-	dr.decoded_payload_length = dr.encoded_payload_length - num_removed_bits;
-
+	/* Extract and decode CRC-16 */
+	memcpy( dr.decoded_crc, (dr.decoded_payload + dr.decoded_payload_length - AIS_CRC_LENGTH), AIS_CRC_LENGTH );	// Copy the CRC-16 to a separate place
+	dr.decoded_payload_length = dr.encoded_payload_length - AIS_CRC_LENGTH;											// Update the payload length now that CRC is not included
 }
 
 
-/* Take an array of 1s and 0s and convert it to actual binary bytes of data */
-void prvBitArrayToBinary( uint32_t array_length )
+/* Check if the received CRC equals the one that is counted based on the payload data. */
+uint32_t prvCheckPayloadCRC()
+{
+	return ( dr.crc16 == prvCRC16( dr.decoded_payload, dr.decoded_payload_length ) );
+}
+
+
+/* Take the CRC-16 array of 1s and 0s and convert it to actual binary bytes of data */
+void prvCRCToBytes()
+{
+
+	/* Convert digitized CRC from array of "bits" to bytes */
+	uint8_t byte = 0;
+	uint32_t byte_idx = 0;											// Index for completed bytes
+	uint8_t crc_array[2];
+	uint8_t j;
+	for ( uint32_t i=0; i < AIS_CRC_LENGTH; i+=8 )					// Move always 8 bits forward to jump to the next byte
+	{
+		for( j=i; j<(i+8); ++j )									// 8 bits makes a byte
+		{
+			if( dr.decoded_crc[j] == 1 ) byte |= 1 << (7-j);		// Bitshift to get the bits in their correct locations TODO: Verify this works correctly
+		}
+		crc_array[byte_idx] = byte;									// Temporarily store the two bytes making up the CRC in an array
+		byte = 0;
+		byte_idx++;
+	}
+	dr.crc16 = (crc_array[0] << 8) | crc_array[1];
+}
+
+
+/* Take the payload array of 1s and 0s and convert it to actual binary bytes of data */
+void prvPayloadToBytes()
 {
 	/* Check that the number of payload bits is a multiple of 6 (AIS message consists of 6 bit chars) */
-	if ( !(array_length % 6) )
+	if ( !( dr.decoded_payload_length % 6) )
 	{
-		Error_Handler();			// TODO: Do something in the error hander
+		Error_Handler();
 	}
-	dr.decoded_payload_length = 0;
-	/* Convert digitized data from array of "bits" to bytes */
+	dr.ascii_message_length = 0;
+	/* Convert digitized payload from array of "bits" to bytes */
 	uint8_t byte = 0;
-	uint8_t j;
-	for ( uint32_t i=0; i < array_length; i+=6 )
+	uint32_t byte_idx = 0;										// Index for copmleted bytes
+	uint32_t j;
+	for ( uint32_t i=0; i < dr.decoded_payload_length; i+=6 )		// Move always 6 bits forward to jump to the next char
 	{
-		for( j=i; j<(i+6); ++j )								// Characters in AIS payload are 6 bits long
+		for( j=i; j<(i+6); ++j )									// Characters in AIS payload are 6 bits long
 		{
-			if( dr.decoded_payload[j] == 1 ) byte |= 1 << (7-j);
+			if( dr.decoded_payload[j] == 1 ) byte |= 1 << (7-j);	// Bitshift to get the bits in their correct locations TODO: Verify this works correctly, especially for our 6 bit chars
 		}
-		dr.decoded_payload[j] = byte + 48;		// Add 48 to a 6 bit char to make it the represent the corresponding 8 bit char TODO: Verify this is all that is needed for conversion.
-		byte = 0;
-		dr.decoded_payload_length++;
+		dr.ascii_message[byte_idx] = byte + 48;						// Add 48 to a 6 bit char to make it the represent the corresponding 8 bit char TODO: Verify this is all that is needed for conversion.
+		byte = 0;													// Reset byte for next one
+		byte_idx++;
+		dr.ascii_message_length++;									// Count how many bytes (chars) have been found
 	}
 }
 
-
-
-
-
-
-
-
-
-
-/* Detect AIS message start flag */
-uint32_t prvDetectStartOrEndFlag(unsigned int *data)
-{
-	uint32_t flag_found = 1;
-	uint32_t i;
-
-	for ( i=1; i<AIS_START_END_FLAG_LENGTH-1; i++ )				// Must check the last bit separately as it should be different
-	{
-		if ( data[i] == data[i-1] )
-		{
-			continue;
-		}
-		else
-		{
-			flag_found = 0;
-			return flag_found;
-		}
-	}
-	if ( data[i] == data[i-1] )
-	{
-		flag_found = 0;
-	}
-	return flag_found;
-}
 

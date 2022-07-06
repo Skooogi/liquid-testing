@@ -46,6 +46,7 @@ typedef struct decoder {
 
 	uint8_t ascii_message[AIS_MAX_PAYLOAD_BITS/AIS_BITS_PER_CHAR];						// Array for storing the final decode message (in 8 bit ASCII)
 	uint32_t ascii_message_length;														// Length of the ASCII message in bytes.
+	uint16_t crc16;																	// Decoded CRC-16
 
 } *decoder_t;
 
@@ -58,11 +59,10 @@ void prvDecoderInit();
 void prvDetectPreamble( unsigned int sample );
 void prvDetectStartFlag( unsigned int sample );
 void prvDetectEndFlag( unsigned int sample );
-void prvPayloadDecode( uint32_t *data );
-void prvBitArrayToBinary( uint32_t array_length );
-
-uint32_t prvDetectStartOrEndFlag(unsigned int *data);
-
+void prvPayloadAndCRCDecode();
+void prvPayloadToBytes();
+void prvCRCToBytes();
+uint32_t prvCheckPayloadCRC();
 
 
 #endif /* CORE_INC_DECODER_H_ */

@@ -6,6 +6,7 @@
  */
 
 #include "dsp.h"
+#include "buffer.h"
 #include "main.h"
 #include "FreeRTOS.h"
 #include "task.h"
@@ -198,21 +199,31 @@ static void prvDSPPipeline()
     /* Frame detection: Look for preamble, start flag, and end flag. Determine payload length and destuff payload data. */
 	for ( uint32_t i=0; i<dsp.dm.output_length; i++ )
 	{
-		if ( !dsp.dr.preamble_found )						// If preamble is not found, look for that
+		if ( !dsp.dr.preamble_found )										// If preamble has not been found, look for that
 		{
-			prvDetectPreamble( dsp.demodulated_data[i] );
+			prvDetectPreamble( dsp.demodulated_data[i] );					// Look for preamble
 		}
-		else if ( !dsp.dr.startflag_found )					// If preamble is found but the start flag is not found, look for that
+		else if ( !dsp.dr.startflag_found )									// If preamble has been found but the start flag has not been found, look for that
 		{
-			prvDetectStartFlag( dsp.demodulated_data[i] );
+			prvDetectStartFlag( dsp.demodulated_data[i] );					// Look for start flag
 		}
-		else if ( !dsp.dr.endflag_found )					// If preamble and start flag are found but the end flag is not found, look for that
+		else if ( !dsp.dr.endflag_found )									// If preamble and start flag have been found but the end flag has not been found, look for that
 		{
-			prvDetectEndFlag( dsp.demodulated_data[i] );
+			prvDetectEndFlag( dsp.demodulated_data[i] );					// Look for end flag and extract the payload and corresponding CRC if end flag is found
 		}
-		else if ( dsp.dr.endflag_found )					// If preamble, start flag, and end flag are found, decode the acquired payload
+		else if ( dsp.dr.endflag_found )									// If preamble, start flag, and end flag are found, decode the extracted payload
 		{
-			prvPayloadDecode( dsp.dr.encoded_payload );
+			prvPayloadAndCRCDecode();										// Decode the payload and its CRC
+			prvPayloadToBytes();											// Bitshift the 1s and 0s in the payload array to bytes
+			prvCRCToBytes();												// Bitshift the 1s and 0s in the CRC-16 array to bytes
+
+			if ( prvCheckPayloadCRC() )										// Check the CRC of the payload to make sure the payload has not been corrupted
+			{
+				for ( uint32_t i=0; i<dsp.dr.ascii_message_length; i++ )
+				{
+				buffer_push( dsp.dr.ascii_message[i] );						// Push the message byte by byte to the result buffer.
+				}
+			}
 		}
 
 		/* If true, then preamble found */
@@ -233,8 +244,7 @@ static void prvDSPPipeline()
 				/* Decode the payload */
 				//prvPayloadDecode( dsp.demodulated_data, i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH );
 
-				/* Bitshift the 1s and 0s to bytes */
-				//prvBitArrayToBinary( dsp.dr.decoded_payload_length );
+
 			//}
 		//}
 	}
