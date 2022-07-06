@@ -28,12 +28,13 @@ void prvDecoderInit()
 	dr.endflag_found = 0;
 	dr.encoded_payload_length = 0;
 	dr.decoded_payload_length = 0;
+	dr.decoding_in_progress = 0;
 
 }
 
 
 /* Reset the state of the encoder when no message was found and searching for a new message starts */
-static void prvDecoderReset()
+void prvDecoderReset()
 {
 
 	dr.preamble_counter = 0;
@@ -44,6 +45,7 @@ static void prvDecoderReset()
 	dr.endflag_found = 0;
 	dr.encoded_payload_length = 0;
 	dr.decoded_payload_length = 0;
+	dr.decoding_in_progress = 0;
 
 }
 
@@ -85,6 +87,7 @@ void prvDetectPreamble(unsigned int sample)
 		{
 			dr.preamble_found = 1;														// Preamble found!
 			dr.preamble_counter = 0;													// Preamble counter reset
+			dr.decoding_in_progress = 1;												// Make sure to continue decoding this message instead of changing channel for next data
 		}
 	}
 	else																				// The sample did not fit the preamble pattern
@@ -115,6 +118,7 @@ void prvDetectStartFlag(unsigned int sample)
 			dr.startflag_counter = 0;										// Sample did not match the start flag pattern
 			dr.startflag_found = 0;											// Did not find start flag
 			dr.preamble_found = 0;											// Reset also preamble found flag, since we have to start looking for a preamble again.
+			dr.decoding_in_progress = 0;									// Decoding is no longer in progress for this sample, can start looking from other channels as well
 		}
 	}
 	else if ( dr.startflag_counter < (AIS_START_FLAG_LENGTH - 1) )			// Must check last sample of start flag separately
@@ -129,6 +133,7 @@ void prvDetectStartFlag(unsigned int sample)
 			dr.startflag_counter = 0;										// Sample did not match the start flag pattern
 			dr.startflag_found = 0;											// Did not find start flag
 			dr.preamble_found = 0;											// Reset also preamble found flag, since we have to start looking for a preamble again.
+			dr.decoding_in_progress = 0;									// Decoding is no longer in progress for this sample, can start looking from other channels as well
 		}
 	}
 	else if ( dr.startflag_counter == (AIS_START_FLAG_LENGTH - 1) )
@@ -143,6 +148,7 @@ void prvDetectStartFlag(unsigned int sample)
 			dr.startflag_counter = 0;										// Sample did not match the start flag pattern
 			dr.startflag_found = 0;											// Did not find start flag
 			dr.preamble_found = 0;											// Reset also preamble found flag, since we have to start looking for a preamble again.
+			dr.decoding_in_progress = 0;									// Decoding is no longer in progress for this sample, can start looking from other channels as well
 		}
 	}
 	else																	// Start flag not found
@@ -150,6 +156,7 @@ void prvDetectStartFlag(unsigned int sample)
 		dr.startflag_counter = 0;											// Sample did not match the start flag pattern
 		dr.startflag_found = 0;												// Did not find start flag
 		dr.preamble_found = 0;												// Reset also preamble found flag, since we have to start looking for a preamble again.
+		dr.decoding_in_progress = 0;									// Decoding is no longer in progress for this sample, can start looking from other channels as well
 	}
 }
 
@@ -178,6 +185,7 @@ void prvDetectEndFlag( unsigned int sample )
 			{
 				dr.endflag_counter = 0;											// Sample did not match the end flag pattern
 				dr.endflag_found = 0;											// Did not find end flag
+				dr.decoding_in_progress = 0;									// Decoding is no longer in progress for this sample, can start looking from other channels as well
 			}
 		}
 		else if ( dr.endflag_counter == (AIS_END_FLAG_LENGTH - 1) )
@@ -192,6 +200,7 @@ void prvDetectEndFlag( unsigned int sample )
 			{
 				dr.endflag_counter = 0;											// Sample did not match the end flag pattern
 				dr.endflag_found = 0;											// Did not find end flag
+				dr.decoding_in_progress = 0;									// Decoding is no longer in progress for this sample, can start looking from other channels as well
 			}
 		}
 		dr.encoded_payload_length++;											// Increment the length of the encoded payload
@@ -204,6 +213,7 @@ void prvDetectEndFlag( unsigned int sample )
 		dr.startflag_found = 0;													// Reset also start flag found flag, since we start all over looking for package
 		dr.preamble_found = 0;													// Reset also preamble found flag, since we have to start looking for a preamble again.
 		dr.encoded_payload_length = 0;											// Reset the encoded payload length, since we have to start looking for everything from the start again.
+		dr.decoding_in_progress = 0;											// Decoding is no longer in progress for this sample, can start looking from other channels as well
 	}
 }
 
@@ -286,7 +296,7 @@ void prvPayloadToBytes()
 	dr.ascii_message_length = 0;
 	/* Convert digitized payload from array of "bits" to bytes */
 	uint8_t byte = 0;
-	uint32_t byte_idx = 0;										// Index for copmleted bytes
+	uint32_t byte_idx = 0;											// Index for copmleted bytes
 	uint32_t j;
 	for ( uint32_t i=0; i < dr.decoded_payload_length; i+=6 )		// Move always 6 bits forward to jump to the next char
 	{

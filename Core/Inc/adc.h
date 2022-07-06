@@ -14,14 +14,9 @@
 #include "liquid.h"
 
 
-#define ADC_RX_PRIORITY				( tskIDLE_PRIORITY + 1 )
-#define ADC_RX_BUF_SIZE  			0x1000						// Must be 2*N*FFT_SIZE, where N is an integer TODO: Is this true anymore
-#define ADC_TEMPERATURE_BUF_SIZE	0x800						// TODO: Just a preliminary guess, probably overkill but depends on the temperature data rate.
-#define ADC_DBUF_LEN				4							// How many full sets of raw ADC data can fit one buffer in the double buffer.
-#define BUF_SIZE 					0x1000
-#define UINT16_OFFSET 				0x8000
-#define SHORT_MAX 					0x7FFF						// Must be ADC_RX_BUF_SIZE/(2*N), where N is an integer
-#define FFT_SIZE 					0x800
+#define ADC_RX_PRIORITY				( tskIDLE_PRIORITY + 1 )	// ADC receive task priority
+#define ADC_RX_BUF_SIZE  			0x200						// Size of the ADC receive buffer
+#define ADC_TEMPERATURE_BUF_SIZE	0x20						// TODO: Just a preliminary guess
 #define ADC_SAMPLERATE 				288000.0f					// Sample rate of the ADC
 
 

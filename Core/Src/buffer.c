@@ -53,7 +53,7 @@ int buffer_is_empty() {
 
 
 /* Push n bytes of data to the result buffer. */
-void buffer_push_n(uint8_t data[], uint32_t n) {
+void buffer_push_n(uint8_t *data, uint32_t n) {
 	for (int i=0; i<n; i++) {
 		buffer_push(data[i]);
 	}

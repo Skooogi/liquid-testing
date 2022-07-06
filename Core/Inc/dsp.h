@@ -9,21 +9,25 @@
 #include <stdint.h>
 #include "adc.h"
 #include "decoder.h"
-#include "math.h"
 #include "complex.h"
-#include "arm_math.h"
-#include "arm_const_structs.h"
-#include "FreeRTOS.h"
-#include "task.h"
 #include "liquid.h"
 
-#define BLOCK_SIZE         				64
-#define NUM_BLOCKS 						ADC_RX_BUF_SIZE/BLOCK_SIZE/2
-
-#define SYMBOLRATE						9600.0f
-#define SAMPLES_PER_SYMBOL				ADC_SAMPLERATE/SYMBOLRATE
+#define FFT_SIZE 						ADC_RX_BUF_SIZE/2			// Number of samples for FFT
+#define SYMBOLRATE						9600.0f						// AIS data baudrate
+#define SAMPLES_PER_SYMBOL				ADC_SAMPLERATE/SYMBOLRATE	// How many samples per symbol for raw ADC data
 
 
+
+/* A struct to store FFT (fft) object options. */
+struct fft {
+	unsigned int size;  											// == 256, input data size
+	int flags;        												// FFT flags (typically ignored)
+	complex float fft_buf[FFT_SIZE*2];
+	float mag_buf[FFT_SIZE*2];
+	float max_mag;
+	uint32_t max_mag_idx;
+	fftplan fft;													// Create FFT plan
+};
 
 /* A struct to store filter (firfilt) object options. */
 struct filter {
@@ -74,17 +78,10 @@ struct demod {
 typedef struct dsp {
 
 	/* General variables */
-	uint8_t processing_request_flag;
-	uint32_t batch_sn;
-	uint32_t frame_counter;
-
-	/* These are for fft frequency detection implementation
-	complex float fft_buf[FFT_SIZE*2];
-	complex float fft_mag_buf[FFT_SIZE*2];
-	complex float fft_max_mag;
-	uint32_t fft_max_mag_idx;
-	*/
-	float mix_freq;
+	uint8_t processing_request_flag;								// Set if there is data requiring processing
+	uint32_t batch_sn;												// Coun how many times the DSP pipeline has been invoked
+	uint32_t message_counter;										// Counts number of successful decoded messages
+	float mix_freq;													// Mixing frequency determined by the FFT
 
 	/* Arrays to store intermediate results. */
 	complex float raw_IQ[ADC_RX_BUF_SIZE];
@@ -94,6 +91,7 @@ typedef struct dsp {
     unsigned int *demodulated_data;
 
     /* Structs for storing options of the liquid-dsp objects used. */
+    struct fft fft;													// FFT object options
     struct filter fr;												// Filter object options
     struct resamp rs;												// Resampler object options
     struct symsync ss;												// Symbol synchronizer object options
@@ -101,8 +99,6 @@ typedef struct dsp {
 
     /* Struct for storing options of the decoder object. */
     struct decoder dr;
-
-    /* Flag telling whether there is a prospective AIS message being decoded. If this is set, do not change channel */
 
 } *dsp_t;
 

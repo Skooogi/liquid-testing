@@ -18,6 +18,7 @@ struct dsp dsp = {
 
 	.processing_request_flag = 0,
 	.batch_sn = 0,
+	.message_counter = 0,
 	.mix_freq = 0,
 
 };
@@ -25,6 +26,11 @@ struct dsp dsp = {
 
 void prvDSPInit()
 {
+
+	/* FFT init */
+	dsp.fft.size = 0x100;  																												// == 256, input data size
+	dsp.fft.flags = 0;        																											// FFT flags (typically ignored)
+	dsp.fft.fft = fft_create_plan(dsp.fft.size, dsp.raw_IQ, dsp.fft.fft_buf, LIQUID_FFT_FORWARD, dsp.fft.flags);						// Create FFT plan
 
     /* filter init */
     dsp.fr.fc = 1.0*(ADC_SAMPLERATE/2.0)/(1.0*SYMBOLRATE * SAMPLES_PER_SYMBOL);			         										// Filter cutoff frequency
@@ -126,49 +132,40 @@ static void prvDSPPipeline()
 	/* Remove DC spike from the data. */
 	prvSubtractMean( dsp.raw_IQ, ADC_RX_BUF_SIZE );
 
-
-	/* Assume channel. TODO: Use fft to find on which channel there is a signal (or is there any signal on the right channels at all) */
-#define A 1		// Is the signal on the A channel? (NOTE: This can be choosed for debugging)
-#if A
-	dsp.mix_freq = -25e3;		// Amount to shift by
-#else
-	dsp.mix_freq = +25e3;		// Amount to shift by
-#endif
-
-	/* TODO: Perform FFT */
-	//arm_cfft_q31(&arm_cfft_sR_q31_len2048, dsp.fft_buf, dsp.ifft_flag, dsp.bit_reverse_flag);
-	/* Calculate the complex magnitude of the FFT. */
-	//arm_cmplx_mag_q31(dsp.fft_buf, dsp.fft_mag_buf, FFT_SIZE);
-	/* Find max magnitude and index of said max magnitude */
-	//arm_max_q31(dsp.fft_mag_buf, FFT_SIZE, &(dsp.fft_max_mag), &(dsp.fft_max_mag_idx));
-
-	/* Calculate peak frequency */
-	/*if ( dsp.fft_max_mag_idx > FFT_SIZE/2 )		// On right plane --> get negative value
+	/* Perform FFT to detect data on either A or B channel only if no promising message is currently being decoded. If decoding is in progress, don't change the mix frequency. */
+	if ( !dsp.dr.decoding_in_progress )
 	{
-		dsp.mix_freq = (int32_t)(dsp.fft_max_mag_idx * ((ADC_SAMPLERATE/2) / FFT_SIZE) % (ADC_SAMPLERATE/2)) - ADC_SAMPLERATE/2;
+		fft_execute( dsp.fft.fft );																					// Perform FFT
+		for ( uint32_t i=0; i<FFT_SIZE*2; i++ )
+		{
+			dsp.fft.mag_buf[i] = sqrt( dsp.fft.fft_buf[i] * conj(dsp.fft.fft_buf[i]) ); 							// Compute the complex magnitudes of the FFT
+		}
+		dsp.fft.max_mag = 0;																						// Reset maximum magnitude
+		dsp.fft.max_mag_idx = 0;																					// Reset maximum magnitude index
+		for ( uint32_t i=0; i<FFT_SIZE*2; i++ )
+		{
+			if ( dsp.fft.mag_buf[i] > dsp.fft.max_mag )																// Check if the current magnitude is larger than the previously largest
+			{
+				dsp.fft.max_mag = dsp.fft.mag_buf[i];																// Update largest magnitude
+				dsp.fft.max_mag_idx = i;																			// Update largest magnitude index
+			}
+		}
+		dsp.mix_freq = (dsp.fft.max_mag_idx - FFT_SIZE) * ADC_SAMPLERATE / FFT_SIZE;								// Calculate peak frequency TODO: Confirm if this is calculated correctly
+
+		/* Peak expected around 25 kHz or -25 kHz, check if mix_freq has valid value */
+		if( (dsp.mix_freq > 30000 && dsp.mix_freq < 20000) || (dsp.mix_freq < -30000 && dsp.mix_freq > -20000) )	// If true, mix frequency far off --> no AIS data
+		{
+			return;																									// Return from function to wait for new ADC data
+		}
 	}
-	else  											// On left plane --> get positive value
-	{
-		dsp.mix_freq = dsp.fft_max_mag_idx * (ADC_SAMPLERATE/2) / FFT_SIZE;
-	}*/
-
-	/* Peak expected around 25 kHz, check if mix_freq has valid value */
-	/*if( (dsp.mix_freq > 30000 && dsp.mix_freq < 20000) || (dsp.mix_freq < -30000 && dsp.mix_freq > -20000) )	// mix_frequency far off, not correct one
-	{
-		dsp.mix_freq = 0;
-		memset(dsp.fft_mag_buf, 0, 2*FFT_SIZE*sizeof(q31_t));
-	}*/
 
 
 	/* Downmix from +25 kHz or -25 kHz to 0 Hz. */
-	if(dsp.mix_freq != 0)
+
+	for( uint16_t i = 0; i<ADC_RX_BUF_SIZE; i++ )
 	{
-		float t;
-		for( uint16_t i = 0; i<ADC_RX_BUF_SIZE; i++ )
-		{
-			t = (1.0*i) / (1.0*ADC_SAMPLERATE);														// Time of sample
-			dsp.raw_IQ[i] = (complex float) (dsp.raw_IQ[i] * cexp(2*I*M_PI*dsp.mix_freq*t));		// Downmix
-		}
+		float t = (1.0*i) / (1.0*ADC_SAMPLERATE);														// Time of sample
+		dsp.raw_IQ[i] = (complex float) (dsp.raw_IQ[i] * cexp(2*I*M_PI*dsp.mix_freq*t));		// Downmix
 	}
 
 
@@ -199,58 +196,33 @@ static void prvDSPPipeline()
     /* Frame detection: Look for preamble, start flag, and end flag. Determine payload length and destuff payload data. */
 	for ( uint32_t i=0; i<dsp.dm.output_length; i++ )
 	{
-		if ( !dsp.dr.preamble_found )										// If preamble has not been found, look for that
+		if ( !dsp.dr.preamble_found )														// If preamble has not been found, look for that
 		{
-			prvDetectPreamble( dsp.demodulated_data[i] );					// Look for preamble
+			prvDetectPreamble( dsp.demodulated_data[i] );									// Look for preamble
 		}
-		else if ( !dsp.dr.startflag_found )									// If preamble has been found but the start flag has not been found, look for that
+		else if ( !dsp.dr.startflag_found )													// If preamble has been found but the start flag has not been found, look for that
 		{
-			prvDetectStartFlag( dsp.demodulated_data[i] );					// Look for start flag
+			prvDetectStartFlag( dsp.demodulated_data[i] );									// Look for start flag
 		}
-		else if ( !dsp.dr.endflag_found )									// If preamble and start flag have been found but the end flag has not been found, look for that
+		else if ( !dsp.dr.endflag_found )													// If preamble and start flag have been found but the end flag has not been found, look for that
 		{
-			prvDetectEndFlag( dsp.demodulated_data[i] );					// Look for end flag and extract the payload and corresponding CRC if end flag is found
+			prvDetectEndFlag( dsp.demodulated_data[i] );									// Look for end flag and extract the payload and corresponding CRC if end flag is found
 		}
-		else if ( dsp.dr.endflag_found )									// If preamble, start flag, and end flag are found, decode the extracted payload
+		else if ( dsp.dr.endflag_found )													// If preamble, start flag, and end flag are found, decode the extracted payload
 		{
-			prvPayloadAndCRCDecode();										// Decode the payload and its CRC
-			prvPayloadToBytes();											// Bitshift the 1s and 0s in the payload array to bytes
-			prvCRCToBytes();												// Bitshift the 1s and 0s in the CRC-16 array to bytes
+			prvPayloadAndCRCDecode();														// Decode the payload and its CRC
+			prvPayloadToBytes();															// Bitshift the 1s and 0s in the payload array to bytes
+			prvCRCToBytes();																// Bitshift the 1s and 0s in the CRC-16 array to bytes
 
-			if ( prvCheckPayloadCRC() )										// Check the CRC of the payload to make sure the payload has not been corrupted
+			if ( prvCheckPayloadCRC() )														// Check the CRC of the payload to make sure the payload has not been corrupted
 			{
-				for ( uint32_t i=0; i<dsp.dr.ascii_message_length; i++ )
-				{
-				buffer_push( dsp.dr.ascii_message[i] );						// Push the message byte by byte to the result buffer.
-				}
+				buffer_push_n( dsp.dr.ascii_message, dsp.dr.ascii_message_length );			// Push the message byte by byte to the result buffer.
+				dsp.message_counter++;														// Increment the successful message count
+				prvDecoderReset();															// Reset the state of the decoder to start looking for new messages
 			}
 		}
-
-		/* If true, then preamble found */
-		//if ( prvDetectPreamble(dsp.demodulated_data[i]) )
-		//{
-			/* If true, then start flag found */
-			//if ( prvDetectStartOrEndFlag(dsp.demodulated_data + i + AIS_PREAMBLE_LENGTH) )
-			//{
-				/* Iterate over the possible payload and look for end flag */
-				//for ( dsp.dr.encoded_payload_length=0; dsp.dr.encoded_payload_length<=AIS_MAX_PAYLOAD_BITS; dsp.dr.encoded_payload_length++ )
-				//{
-					/* If true, end flag detected, stop counting */
-					//if ( prvDetectStartOrEndFlag(dsp.demodulated_data + i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH) )
-					//{
-					//	break;
-					//}
-				//}
-				/* Decode the payload */
-				//prvPayloadDecode( dsp.demodulated_data, i + AIS_PREAMBLE_LENGTH + AIS_START_END_FLAG_LENGTH );
-
-
-			//}
-		//}
 	}
 }
-
-
 
 
 /* DSP Task responsible for the complete DSP pipeline */
@@ -279,9 +251,7 @@ void prvDSPTask( void *pvParameters )
 			prvDSPPipeline();
 			dsp.batch_sn++;
 		}
-
 	}
-
 }
 
 

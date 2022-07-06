@@ -46,7 +46,9 @@ typedef struct decoder {
 
 	uint8_t ascii_message[AIS_MAX_PAYLOAD_BITS/AIS_BITS_PER_CHAR];						// Array for storing the final decode message (in 8 bit ASCII)
 	uint32_t ascii_message_length;														// Length of the ASCII message in bytes.
-	uint16_t crc16;																	// Decoded CRC-16
+	uint16_t crc16;																		// Decoded CRC-16
+
+	uint32_t decoding_in_progress;														// Flag is set if promising decoding is in progress (e.g. preamble already found, don't change channels when set)
 
 } *decoder_t;
 
@@ -56,6 +58,7 @@ extern struct decoder dr;
 
 /************* Publicly callable functions *************/
 void prvDecoderInit();
+void prvDecoderReset();
 void prvDetectPreamble( unsigned int sample );
 void prvDetectStartFlag( unsigned int sample );
 void prvDetectEndFlag( unsigned int sample );

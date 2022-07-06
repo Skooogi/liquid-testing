@@ -130,11 +130,6 @@ void PeriphCommonClock_Config(void);								// CubeMX did not generate this :(
 /* USER CODE BEGIN 0 */
 
 
-int16_t swap_bytes(int16_t data){
-	data = data+UINT16_OFFSET;
-	return data;
-}
-
 
 static void prvBlinkLED( void *pvParameters ) {
 
