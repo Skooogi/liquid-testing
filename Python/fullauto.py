@@ -60,9 +60,9 @@ if len(specs_bytes) >= 6:
     samples = specs[0]
     bytes_per_int = specs[1]
     sleeptime = specs[2]
-    print(f"RECEIVED sample len: {samples} & bytes/int: {bytes_per_int} & sleeptime: {sleeptime}ms")
+    print(f"RECEIVED sample/loop len: {samples} & bytes/int: {bytes_per_int} & sleeptime: {sleeptime}ms")
 else:
-    print(f"Using DEFAULT sample len: {samples} & bytes/int: {bytes_per_int} & sleeptime: {sleeptime}ms")
+    print(f"Using DEFAULT sample/loop len: {samples} & bytes/int: {bytes_per_int} & sleeptime: {sleeptime}ms")
 
 # Current implementation is a loop that sends samples of signal to RTT,
 # sleeps for while (as DSP happens on µC), and then tries to read
@@ -71,7 +71,7 @@ else:
 # Could maybe be done with threads instead.
 while True:
     # Ask user what to do in loop
-    user = input(f"SEND {len_total} data smpls to RTT buffer? a(all) or x(int) or q(quit): ")
+    user = input(f"SEND {len_total} total data smpls to RTT buffer? a(all) or x(int) or q(quit): ")
 
     # User input 'q' closes RTT session and stops execution of script
     if user == 'q' or user == 'quit' or user == 'n':

@@ -7,6 +7,7 @@
 
 #include "main.h"
 #include "FreeRTOS.h"
+#include "task.h"
 #include "debugRTT.h"
 #include "saved_signal.h"
 
