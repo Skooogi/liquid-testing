@@ -48,18 +48,21 @@ print(f"RTT satus: {jlink.rtt_get_status()}")       # check RTT status, note int
 
 i_data = lil_endian.txt_reader("hI.txt")            # Saved signal from .txt file
 q_data = lil_endian.txt_reader("hQ.txt")            # Saved signal from .txt file
+i_bytes = lil_endian.bytes_from_data(i_data, bytes_per_int, False)
+q_bytes = lil_endian.bytes_from_data(q_data, bytes_per_int, False)
 total_data = len(i_data)                            # Total data length to keep cycling data in loop
 
 # Read the 'specs' for RTT communication.
 # Specs being number of samples to send at a time and how many bytes/sample.
-specs_bytes = jlink.rtt_read(3, 4)
-if len(specs_bytes) >= 3:
+specs_bytes = jlink.rtt_read(3, 6)
+if len(specs_bytes) >= 6:
     specs = lil_endian.byte_parser(specs_bytes, bytes_per_int, False)
     samples = specs[0]
     bytes_per_int = specs[1]
-    print(f"RECEIVED sample len: {samples} & bytes/int: {bytes_per_int}")
+    sleeptime = specs[2]
+    print(f"RECEIVED sample len: {samples} & bytes/int: {bytes_per_int} & sleeptime: {sleeptime}ms")
 else:
-    print(f"Using DEFAULT sample len: {samples} & bytes/int: {bytes_per_int}")
+    print(f"Using DEFAULT sample len: {samples} & bytes/int: {bytes_per_int} & sleeptime: {sleeptime}ms")
 
 # Current implementation is a loop that sends test signal to RTT,
 # sleeps for while (as DSP happens on µC), and then tries to read
@@ -92,15 +95,13 @@ while True:
     # 1.calculate last idx; 2.convert data to bytes; 3.write data to RTT buffer
     #
     last_idx = send_sams*bytes_per_int - 1 + 1  # One sacrificial byte must be sent to be missed by RTT read.
-    i_bytes = lil_endian.bytes_from_data(i_data, bytes_per_int, False)
-    q_bytes = lil_endian.bytes_from_data(q_data, bytes_per_int, False)
     print(f"Sending {send_sams} samples, {last_idx+1} bytes (one byte as sacrifice)")
     jlink.rtt_write(1, i_bytes[0:last_idx])     # write data (as bytes) to RTT down-buffer '1'
     jlink.rtt_write(2, q_bytes[0:last_idx])     # write data (as bytes) to RTT down-buffer '2'
 
     print(f"Sent data. Sleeping..")
-    time.sleep(sleeptime)
-    print(f"Slept for {sleeptime} seconds. New loop..")
+    time.sleep(sleeptime/1000)
+    print(f"Slept for {sleeptime/1000} seconds. New loop..")
 
     #
     # READ DATA:

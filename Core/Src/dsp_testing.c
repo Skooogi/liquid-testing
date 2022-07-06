@@ -17,9 +17,10 @@ void prvDSPTestingTask( void *pvParameters ) {
 	( void ) pvParameters;
 
 
-	int samples = 800;   // How many samples are received and sent back. Size of alloc'd buffers in int16 s.
-	int bytesPsamp = 2;  // 2 bytes per data sample (int16_t)
-	printf("Begin DSP testing task\n");
+	int samples = 800;  	// How many samples are received and sent back. Size of alloc'd buffers in int16 s.
+	int bytesPsamp = 2; 	// 2 bytes per data sample (int16_t)
+	int sleeptime = 3000;
+	printf("Begin DSP testing task \n");
 
 
 
@@ -34,42 +35,29 @@ void prvDSPTestingTask( void *pvParameters ) {
 	int16_t allocArrayQ[samples+1];								// Allocate memory for RTT buffer
 	array2RTTbuffer(1, 1, allocArrayI, sizeof(allocArrayI));	// Configure RTT up-buffer '1'='DataOutI'
 	array2RTTbuffer(1, 2, allocArrayQ, sizeof(allocArrayQ));	// Configure RTT up-buffer '2'='DataOutQ
-	int16_t allocArraySpecs[6];									// Allocate memory for RTT buffer
-	array2RTTbuffer(1, 3, allocArraySpecs, sizeof(allocArraySpecs));// Configure RTT up-buffer '1'='DataOutI'
 	int16_t allocDownArrayI[samples+1];								// Allocate memory for RTT buffer
 	int16_t allocDownArrayQ[samples+1];								// Allocate memory for RTT buffer
 	array2RTTbuffer(-1, 1, allocDownArrayI, sizeof(allocDownArrayI));	// Configure RTT down-buffer '1'='DataInI'
 	array2RTTbuffer(-1, 2, allocDownArrayQ, sizeof(allocDownArrayQ));	// Configure RTT down-buffer '2'='DataInQ'
 
-	int16_t specs[6] = {samples, bytesPsamp, samples, bytesPsamp, samples, bytesPsamp};
+	// Send communication specs over RTT to python scripts
+	int16_t allocArraySpecs[6];									// Allocate memory for RTT buffer
+	array2RTTbuffer(1, 3, allocArraySpecs, sizeof(allocArraySpecs));// Configure RTT up-buffer '3'='DataOut'
+	int16_t specs[6] = {samples, bytesPsamp, sleeptime, samples, bytesPsamp, sleeptime};
 	SEGGER_RTT_Write(3, &specs[0], sizeof(specs));
 
-	// READ THE DOWN BUFFER
+	// Allocate buffers for read data
 	int16_t readDataI[samples];
 	int16_t readDataQ[samples];
-	unsigned numBytesI;
-	unsigned numBytesQ;
-
-	/* Add 10k _SAVED_ signal points to test array ; OBSOLETE as data samples come through RTT now
-	int16_t testArr[samples];
-	// Save test data to I up-buffer '1'
-	for (int k = 0; k<10000; k++){
-		testArr[k] = savedIdata[k];
-	}
-	for (int k = 0; k<10000; k++){
-		testArr[k] = savedQdata[k];
-	}
-	*/
+	unsigned numBytesI, numBytesQ;
 
 
-	printf("Begin read, process, return data loop..");
+	printf("Begin read, process, return data loop..\n");
 
 	for( ;; ){
-
 		/*
 		 * DATA IN part
 		 */
-
 		numBytesI = SEGGER_RTT_Read(1, &readDataI[0], sizeof(readDataI));
 		printf("Read %d bytes from down-buff 1 = 'I':\n", numBytesI);
 		numBytesQ = SEGGER_RTT_Read(2, &readDataQ[0], sizeof(readDataQ));
@@ -102,9 +90,7 @@ void prvDSPTestingTask( void *pvParameters ) {
 			 */
 			// WRITE DATA to up-buffers
 			numBytesI = SEGGER_RTT_Write(1, &readDataI[0], numBytesI);	// Write I data to up-buffer '1' = I
-			vTaskDelay(100);
-			numBytesQ =SEGGER_RTT_Write(2, &readDataQ[0], numBytesQ);	// Write Q data to up-buffer '2' = Q
-			vTaskDelay(100);
+			numBytesQ = SEGGER_RTT_Write(2, &readDataQ[0], numBytesQ);	// Write Q data to up-buffer '2' = Q
 			if (numBytesI > 0) printf("Send I data back, ");
 			if (numBytesQ > 0) printf("Send Q data back; ");
 
@@ -114,10 +100,10 @@ void prvDSPTestingTask( void *pvParameters ) {
 		}
 
 		// WAIT A LITTLE FOR NEXT LOOP (5sec)
-		printf("waiting 5 secs\n\n");
-		vTaskDelay(5000);
-
+		printf("waiting %d secs\n\n", (sleeptime/1000));
+		vTaskDelay(sleeptime);
 	}
+
 
 }
 
