@@ -7,7 +7,10 @@
  * is ignored.
  *
  */
+
+
 #include "buffer.h"
+
 
 /* Define instance of the result buffer. */
 struct resultbuffer resultbuf;

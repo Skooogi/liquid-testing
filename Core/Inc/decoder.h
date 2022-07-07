@@ -29,26 +29,27 @@ typedef struct decoder {
 	uint32_t lastlast_sample;															// Store the sample before the last sample (i-2) for comparison purposes
 
 	uint32_t preamble_counter;															// Count how many samples fitting the preamble pattern have been found
-	uint32_t preamble_found;															// Detected preamble
+	uint8_t preamble_found;																// Detected preamble
 
 	uint32_t startflag_counter;															// Count how many samples fitting the start flag pattern have been found
-	uint32_t startflag_found;															// Detected start flag
+	uint8_t startflag_found;															// Detected start flag
+	uint32_t startflag_end_value;														// Store the value of the last bit of the start flag (is compared with first value of payload)
 
 	uint32_t endflag_counter;															// Count how many samples fitting the end flag pattern have been found
-	uint32_t endflag_found;																// Detected end
+	uint8_t endflag_found;																// Detected end
 
 	uint32_t encoded_payload_length;													// Length of the encoded payload (contains CRC-16)
 	uint32_t encoded_payload[AIS_MAX_ENCODED_PAYLOAD_LENGTH];							// Array to store the encoded payload and CRC for decoding
 
 	uint8_t decoded_payload[AIS_MAX_PAYLOAD_BITS];										// Array for storing the encoded payload data (1s and 0s)
 	uint32_t decoded_payload_length;													// Length of the decoded payload;
-	uint8_t decoded_crc[AIS_CRC_LENGTH];
+	uint8_t decoded_crc[AIS_CRC_LENGTH];												// Array to store the "bits" of the CRC-16 of the message
 
 	uint8_t ascii_message[AIS_MAX_PAYLOAD_BITS/AIS_BITS_PER_CHAR];						// Array for storing the final decode message (in 8 bit ASCII)
 	uint32_t ascii_message_length;														// Length of the ASCII message in bytes.
 	uint16_t crc16;																		// Decoded CRC-16
 
-	uint32_t decoding_in_progress;														// Flag is set if promising decoding is in progress (e.g. preamble already found, don't change channels when set)
+	uint8_t decoding_in_progress;														// Flag is set if promising decoding is in progress (e.g. preamble already found, don't change channels when set)
 
 } *decoder_t;
 
@@ -65,7 +66,7 @@ void prvDetectEndFlag( unsigned int sample );
 void prvPayloadAndCRCDecode();
 void prvPayloadToBytes();
 void prvCRCToBytes();
-uint32_t prvCheckPayloadCRC();
+uint8_t prvCheckPayloadCRC();
 
 
 #endif /* CORE_INC_DECODER_H_ */

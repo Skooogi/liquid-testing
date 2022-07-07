@@ -9,9 +9,11 @@
 #define RESULT_BUFFER_SIZE 0x1000	/* == 4096. Requirement to store 100 latest AIS messages. An AIS message of interest
 									 * is 23 bytes (TODO: TBC) long, and thus 100 messages requires 100 * 23 == 2300 bytes.
 									 * NOTE: Length must be a power of two for performance reasons. Probably a longer buffer
-									 * could be an option as well if more capacity offers some advantage. */
+									 * could be an option as well if more capacity offers some advantage.
+									 * TODO: Can be e.g. half of this length if memory capacity is a problem */
 
 #include <stdint.h>
+
 
 typedef struct resultbuffer {
 

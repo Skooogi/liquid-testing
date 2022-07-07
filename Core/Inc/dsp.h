@@ -6,16 +6,16 @@
 #ifndef CORE_INC_DSP_H_
 #define CORE_INC_DSP_H_
 
-#include <stdint.h>
+
 #include "adc.h"
 #include "decoder.h"
 #include "complex.h"
 #include "liquid.h"
 
+
 #define FFT_SIZE 						ADC_RX_BUF_SIZE/2			// Number of samples for FFT
 #define SYMBOLRATE						9600.0f						// AIS data baudrate
 #define SAMPLES_PER_SYMBOL				ADC_SAMPLERATE/SYMBOLRATE	// How many samples per symbol for raw ADC data
-
 
 
 /* A struct to store FFT (fft) object options. */

@@ -8,10 +8,9 @@
 
 
 #include <stdint.h>
-#include "main.h"
+#include "stm32h7xx_hal.h"
 #include "FreeRTOS.h"
 #include "task.h"
-#include "liquid.h"
 
 
 #define ADC_RX_PRIORITY				( tskIDLE_PRIORITY + 1 )	// ADC receive task priority
@@ -20,18 +19,12 @@
 #define ADC_SAMPLERATE 				288000.0f					// Sample rate of the ADC
 
 
-
-/****** Only for prerecorded test data START ******/
-#define TEST_LENGTH_SAMPLES ((uint32_t) 2048)
-/****** Only for prerecorded test data END ******/
-
-
 /* Structs for storing the states of the RF receiving ADCs */
 typedef struct rfadc {
 
 	uint8_t converting;													// Flag to tell whether the ADC is in the middle of conversions or not
-	ALIGN_32BYTES ( uint32_t rx_buf[ADC_RX_BUF_SIZE] );					// This buffer is only needed for ADC1 (in multimode ADC operations, converted data of both ADC1 and ADC2 are stored in the result register of ADC1)
-	ALIGN_32BYTES ( int32_t data[ADC_RX_BUF_SIZE] );
+	ALIGN_32BYTES ( uint32_t rx_buf[ADC_RX_BUF_SIZE] );					// Converted data of both ADC1 and ADC2 are stored in this buffer
+	ALIGN_32BYTES ( int32_t data[ADC_RX_BUF_SIZE] );					// The converted data is copied to this buffer in an interrupt for post processing
 
 } *rfadc_t;
 
@@ -56,5 +49,7 @@ void prvADCTask( void *pvParameters );							// Task acquiring latest ADC data
 void prvADCInit();												// Initialize the state of the ADC
 void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc);		// ADC conversion half complete callback
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc);			// ADC conversion complete callback
+
+
 
 #endif /* INC_ADC_H_ */

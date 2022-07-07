@@ -5,27 +5,24 @@
  *
  */
 
+
+#include "stdlib.h"
 #include "dsp.h"
 #include "buffer.h"
-#include "main.h"
-#include "FreeRTOS.h"
-#include "task.h"
-#include <math.h>
-#include <stdlib.h>
 
 
-struct dsp dsp = {
-
-	.processing_request_flag = 0,
-	.batch_sn = 0,
-	.message_counter = 0,
-	.mix_freq = 0,
-
-};
+struct dsp dsp = { };
 
 
 void prvDSPInit()
 {
+
+	/* General init */
+
+	dsp.processing_request_flag = 0;
+	dsp.batch_sn = 0;
+	dsp.message_counter = 0;
+	dsp.mix_freq = 0;
 
 	/* FFT init */
 	dsp.fft.size = 0x100;  																												// == 256, input data size
@@ -164,8 +161,8 @@ static void prvDSPPipeline()
 
 	for( uint16_t i = 0; i<ADC_RX_BUF_SIZE; i++ )
 	{
-		float t = (1.0*i) / (1.0*ADC_SAMPLERATE);														// Time of sample
-		dsp.raw_IQ[i] = (complex float) (dsp.raw_IQ[i] * cexp(2*I*M_PI*dsp.mix_freq*t));		// Downmix
+		float t = (1.0*i) / (1.0*ADC_SAMPLERATE);													// Time of sample
+		dsp.raw_IQ[i] = (complex float) (dsp.raw_IQ[i] * cexp(2*I*M_PI*dsp.mix_freq*t));			// Mix to 0 Hz
 	}
 
 
