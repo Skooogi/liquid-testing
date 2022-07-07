@@ -57,9 +57,11 @@ print(f"Q data read from txt: {q_data[0:9]}")
 # what the µC is sending back.
 # Should maybe be done with threads instead.
 while True:
-    user = input(f"SEND {samples} data smpls to RTT buffer? a(all) or x(int) or n(exit): ")
-    # User input 'n' closes RTT session and stops execution of script
-    if user == 'n':
+    # Ask user what to do in loop
+    user = input(f"SEND {samples} data smpls to RTT buffer? a(all) or x(int) or q(quit): ")
+
+    # User input 'q' closes RTT session and stops execution of script
+    if user == 'q' or user == 'quit' or user == 'n':
         jlink.rtt_stop()
         print("Stopping execution.")
         exit()

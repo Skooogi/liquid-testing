@@ -8,6 +8,7 @@ Makefile
 STM32H743ZITx_FLASH.ld
 startup_stm32h743xx.s
 .cproject
+<<<<<<< HEAD
 .cproject.*
 Python/.idea/**
 .metadata/
@@ -16,3 +17,6 @@ Python/.idea/**
 .project.*
 Kvarkensat Debug.launch
 Kvarkensat.launch
+=======
+.project
+>>>>>>> debugger
