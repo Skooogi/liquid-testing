@@ -181,7 +181,7 @@ static void pvrInitBoard()
 	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
 
 	/* Start ADCs in Multimode DMA configuration */
-	if(HAL_ADCEx_MultiModeStart_DMA(ADCI, (uint32_t*)adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+	if(HAL_ADCEx_MultiModeStart_DMA(ADCI, adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
 		Error_Handler();
 
 	/* Start TIM2 to produce interrupts for ADC conversion triggering */

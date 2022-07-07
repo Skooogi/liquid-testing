@@ -19,18 +19,20 @@
 
 
 /* A struct to store FFT (fft) object options. */
-struct fft {
+struct fft
+{
 	unsigned int size;  											// == 256, input data size
 	int flags;        												// FFT flags (typically ignored)
-	complex float fft_buf[FFT_SIZE*2];
-	float mag_buf[FFT_SIZE*2];
-	float max_mag;
-	uint32_t max_mag_idx;
-	fftplan fft;													// Create FFT plan
+	complex float fft_buf[FFT_SIZE*2];								// Buffer to store data for FFT calculation
+	float mag_buf[FFT_SIZE*2];										// Buffer to store the magnitude of the FFT
+	float max_mag;													// The value of the maximum magnitude of the FFT
+	uint32_t max_mag_idx;											// The index of the maximum magnitude of the FFT
+	fftplan fft;													// FFT plan object
 };
 
 /* A struct to store filter (firfilt) object options. */
-struct filter {
+struct filter
+{
     firfilt_crcf filter;											// Filter object
     float fc;        												// Filter cutoff frequency
     float ft;         												// Filter transition
@@ -42,7 +44,8 @@ struct filter {
 };
 
 /* A struct to store resampler (resamp) object options (for decimation). */
-struct resamp {
+struct resamp
+{
     resamp_crcf resampler;											// Resample object
     uint32_t filter_delay;		    								// filter semi-length (filter delay)
     float rate;               										// resampling rate (output/input)
@@ -55,7 +58,8 @@ struct resamp {
 };
 
 /* A struct to store symbol synchronizer (symsync) object options . */
-struct symsync {
+struct symsync
+{
 	symsync_crcf symsyncer;											// Symsync object
     uint32_t sampersym;    											// samples/symbol
     uint32_t filter_delay;  	 									// filter delay (symbols)
@@ -66,7 +70,8 @@ struct symsync {
 };
 
 /* A struct to store GMSK demodulator (gmskdem) object options . */
-struct demod {
+struct demod
+{
     gmskdem demod;													// GMSK demodulator object
     uint32_t sampersym;    											// filter samples/symbol
     uint32_t filter_delay;    										// filter delay (symbols)
@@ -75,11 +80,12 @@ struct demod {
 };
 
 /* Struct for storing all DSP related options, variables and data. */
-typedef struct dsp {
+typedef struct dsp
+{
 
 	/* General variables */
 	uint8_t processing_request_flag;								// Set if there is data requiring processing
-	uint32_t batch_sn;												// Coun how many times the DSP pipeline has been invoked
+	uint32_t batch_counter;											// Count how many times the DSP pipeline has been invoked
 	uint32_t message_counter;										// Counts number of successful decoded messages
 	float mix_freq;													// Mixing frequency determined by the FFT
 

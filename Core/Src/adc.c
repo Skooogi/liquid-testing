@@ -6,60 +6,25 @@
  */
 
 
+#include <string.h>
 #include "main.h"
 #include "dsp.h"
 
 
 /* Instance of ADC data and state struct for both ADC1 and ADC2 (operating in dual mode with ADC1 as master and ADC2 as slave). */
-struct rfadc adcIQ = {
-	.converting = 0,
-};
+struct rfadc adcIQ = { };
 
 
 /* Instance of ADC data and state struct for ADCT (&hadc3) */
-struct tempadc adcT = {
-	.converting = 0
-};
+struct tempadc adcT = { };
 
 
 void prvADCInit(TIM_HandleTypeDef *htim)
 {
-	/* Initialize the variables storing the states of the ADCs. */
-
-	adcIQ.converting = 0;
-	adcT.converting = 0;
-
-
-	memset( adcIQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-	memset( adcIQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint16_t) );
-
-	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint16_t) );
-
-
-	/* Start RF receiving ADCs. Save data to adcX.rx_buf */
-	/*if ( HAL_ADC_Start_DMA( ADCI, (uint32_t *)adcIQ.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
-	{
-		Error_Handler(); //does nothing-> TODO: error handler
-	}
-
-    if ( HAL_ADC_Start_DMA( ADCQ, (uint32_t *)adcQ.rx_buf, ADC_RX_BUF_SIZE ) != HAL_OK )
-    {
-    	Error_Handler(); //does nothing-> TODO: error handler
-    }*/
-
-
-    /* Start MCU temperature reading ADC. Save data to adcT.rx_buf */
-    /*if ( HAL_ADC_Start_DMA( ADCT, (uint32_t *)adcT.temperature_buf, ADC_TEMPERATURE_BUF_SIZE ) != HAL_OK )
-    {
-    	Error_Handler(); //does nothing-> TODO: error handler
-    }*/
-
-
-    /* Start timer for the ADCs */
-    /*if ( HAL_TIM_Base_Start( TIM_1 ) != HAL_OK )		// TODO: Check if this is the right timer and right place to start it
-    {
-    	Error_Handler(); //does nothing-> TODO: error handler
-    }*/
+	/* Initialize the arrays storing the states of the ADCs. */
+	memset( adcIQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint32_t) );
+	memset( adcIQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint32_t) );
+	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint32_t) );
 
 }
 
@@ -70,7 +35,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 
 	if ( hadc == &hadc1 )
 	{
-		memcpy(adcIQ.data, adcIQ.rx_buf, sizeof(uint32_t)*ADC_RX_BUF_SIZE/2);
+		memcpy( adcIQ.data, adcIQ.rx_buf, sizeof(uint32_t)*ADC_RX_BUF_SIZE/2);		// Copy the data from the first half of the RX buffer for post processing
 	}
 
 	dsp.processing_request_flag = 1;
@@ -85,7 +50,7 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)
 
 	if(hadc == &hadc1)
 	{
-		memcpy(adcIQ.data+ADC_RX_BUF_SIZE/2, adcIQ.rx_buf+ADC_RX_BUF_SIZE/2, sizeof(uint32_t)*ADC_RX_BUF_SIZE/2);
+		memcpy(adcIQ.data+ADC_RX_BUF_SIZE/2, adcIQ.rx_buf+ADC_RX_BUF_SIZE/2, sizeof(uint32_t)*ADC_RX_BUF_SIZE/2);	// Copy the data from the second half of the RX buffer for post processing
 	}
 
 	dsp.processing_request_flag = 1;

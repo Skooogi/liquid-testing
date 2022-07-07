@@ -11,7 +11,7 @@
 #include "buffer.h"
 
 
-struct dsp dsp = { };
+struct dsp dsp = { };																													// Define the dsp struct
 
 
 void prvDSPInit()
@@ -19,10 +19,10 @@ void prvDSPInit()
 
 	/* General init */
 
-	dsp.processing_request_flag = 0;
-	dsp.batch_sn = 0;
-	dsp.message_counter = 0;
-	dsp.mix_freq = 0;
+	dsp.processing_request_flag = 0;																									// Set if there is data requiring processing
+	dsp.batch_counter = 0;																												// Reset the batch counter
+	dsp.message_counter = 0;																											// Reset successful message counter
+	dsp.mix_freq = 0;																													// Reset the mix frequency
 
 	/* FFT init */
 	dsp.fft.size = 0x100;  																												// == 256, input data size
@@ -30,7 +30,7 @@ void prvDSPInit()
 	dsp.fft.fft = fft_create_plan(dsp.fft.size, dsp.raw_IQ, dsp.fft.fft_buf, LIQUID_FFT_FORWARD, dsp.fft.flags);						// Create FFT plan
 
     /* filter init */
-    dsp.fr.fc = 1.0*(ADC_SAMPLERATE/2.0)/(1.0*SYMBOLRATE * SAMPLES_PER_SYMBOL);			         										// Filter cutoff frequency
+    dsp.fr.fc = (SYMBOLRATE * SAMPLES_PER_SYMBOL)/(ADC_SAMPLERATE);			         													// Filter cutoff frequency TODO: Verify the value makes sense for our decimation factor
     dsp.fr.ft = 0.05f;         																											// Filter transition
     dsp.fr.attenuation = 60.0f;   																										// Stop-band attenuation [dB]
     dsp.fr.mu = 0.0f;          																											// Fractional timing offset
@@ -40,37 +40,37 @@ void prvDSPInit()
     dsp.fr.filter = firfilt_crcf_create( dsp.fr.taps, dsp.fr.num_taps );																// Create filter object
 
     /* resamp init */
-    dsp.rs.filter_delay = 13;    																										// filter semi-length (filter delay)
-    dsp.rs.rate = 0.9f;               																									// resampling rate (output/input)
-    dsp.rs.bw = 0.5f;              																										// resampling filter bandwidth
-    dsp.rs.slsl = -60.0f;          																										// resampling filter sidelobe suppression level
-    dsp.rs.npfb = 32;       																											// number of filters in bank (timing resolution)
-    dsp.rs.input_length = ADC_RX_BUF_SIZE + dsp.rs.filter_delay;																		// total length of resampler input
-    dsp.rs.output_length = ceilf(dsp.rs.rate * dsp.rs.input_length);																	// resampler output length ("zero padded" to incorporate filter delay)
+    dsp.rs.filter_delay = 13;    																										// Filter semi-length (filter delay)
+    dsp.rs.rate = 0.9f;               																									// Resampling rate (output/input)
+    dsp.rs.bw = 0.5f;              																										// Resampling filter bandwidth
+    dsp.rs.slsl = -60.0f;          																										// Resampling filter sidelobe suppression level
+    dsp.rs.npfb = 32;       																											// Number of filters in bank (timing resolution)
+    dsp.rs.input_length = ADC_RX_BUF_SIZE + dsp.rs.filter_delay;																		// Total length of resampler input
+    dsp.rs.output_length = ceilf(dsp.rs.rate * dsp.rs.input_length);																	// Resampler output length ("zero padded" to incorporate filter delay)
     dsp.resampled_IQ = malloc( dsp.rs.output_length * sizeof(complex float) );															// Allocate memory for the resampled
-    dsp.rs.num_written = 0;   																											// number of values written to buffer
+    dsp.rs.num_written = 0;   																											// Number of values written to buffer
     dsp.rs.resampler = resamp_crcf_create( dsp.rs.rate, dsp.rs.filter_delay, dsp.rs.bw, dsp.rs.slsl, dsp.rs.npfb );						// Create resampler
 
 	/* symsync init */
-    dsp.ss.sampersym = SAMPLES_PER_SYMBOL;     																							// samples/symbol
-    dsp.ss.filter_delay = 3;     																										// filter delay (symbols)
-    dsp.ss.beta = 0.3f;  																												// filter excess bandwidth factor
-    dsp.ss.npfb  = 32;    																												// number of polyphase filters in bank
-    dsp.ss.ftype = LIQUID_FIRFILT_GMSKRX; 																								// filter type
+    dsp.ss.sampersym = SAMPLES_PER_SYMBOL;     																							// Samples/symbol
+    dsp.ss.filter_delay = 3;     																										// Filter delay (symbols)
+    dsp.ss.beta = 0.3f;  																												// Filter excess bandwidth factor
+    dsp.ss.npfb  = 32;    																												// Number of polyphase filters in bank
+    dsp.ss.ftype = LIQUID_FIRFILT_GMSKRX; 																								// Filter type
     dsp.synced_IQ = malloc( dsp.rs.output_length * sizeof(complex float) );																// Same length as dsp.resampled_IQ
-    dsp.ss.num_written = 0;   																											// number of values written to buffer
+    dsp.ss.num_written = 0;   																											// Number of values written to buffer
     dsp.ss.symsyncer = symsync_crcf_create_rnyquist( dsp.ss.ftype, dsp.ss.sampersym, dsp.ss.filter_delay, dsp.ss.beta, dsp.ss.npfb );	// Create symbol synchronizer
 
     /* demod init */
-    dsp.dm.sampersym = SAMPLES_PER_SYMBOL;    																							// filter samples/symbol
-    dsp.dm.filter_delay = dsp.ss.filter_delay;    																						// filter delay (symbols)
-    dsp.dm.BT = 0.25f;    																												// bandwidth-time product
+    dsp.dm.sampersym = SAMPLES_PER_SYMBOL;    																							// Filter samples/symbol
+    dsp.dm.filter_delay = dsp.ss.filter_delay;    																						// Filter delay (symbols)
+    dsp.dm.BT = 0.25f;    																												// Bandwidth-time product
     dsp.dm.output_length = ceil(dsp.rs.output_length/(float)SAMPLES_PER_SYMBOL) + AIS_MAX_PAYLOAD_BITS;									// The output length is
     dsp.demodulated_data = malloc( dsp.dm.output_length * sizeof(unsigned int) );														// Demodulation output is stored with offset of maximum AIS message lenght
     dsp.dm.demod = gmskdem_create( dsp.dm.sampersym, dsp.dm.filter_delay, dsp.dm.BT );													// Create demod object
 
     /* decoder init (decoder is not a liquid-dsp object) */
-    prvDecoderInit();
+    prvDecoderInit();																													// Initialize the decoder
 
 }
 
@@ -78,20 +78,16 @@ void prvDSPInit()
 /* Function to remove the mean value of the elements of an array from each of its elements */
 static void prvSubtractMean(complex float *data, uint32_t data_length)
 {
-
 	float real_mean;
 	float imag_mean;
 	for (uint32_t i=0; i<ADC_RX_BUF_SIZE; i++)
 	{
-		real_mean = crealf(data[i]);
-		imag_mean = cimagf(data[i]);
-
+		real_mean = crealf(data[i]);								// Calculate mean of real parts
+		imag_mean = cimagf(data[i]);								// Calculate mean of imaginary
 	}
-
 	for(uint32_t i=0; i< ADC_RX_BUF_SIZE; i++) {
 		data[i] -= (real_mean + imag_mean*I);						// subtract mean from each element in array
 	}
-
 }
 
 
@@ -116,7 +112,6 @@ static void prvSubtractMean(complex float *data, uint32_t data_length)
  */
 static void prvDSPPipeline()
 {
-
 	/* Interleave the I and Q signals to one single complex IQ array. */
 	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i++)
 	{
@@ -156,7 +151,6 @@ static void prvDSPPipeline()
 		}
 	}
 
-
 	/* Downmix from +25 kHz or -25 kHz to 0 Hz. */
 
 	for( uint16_t i = 0; i<ADC_RX_BUF_SIZE; i++ )
@@ -165,7 +159,6 @@ static void prvDSPPipeline()
 		dsp.raw_IQ[i] = (complex float) (dsp.raw_IQ[i] * cexp(2*I*M_PI*dsp.mix_freq*t));			// Mix to 0 Hz
 	}
 
-
 	/* Lowpass filter */
     for ( uint32_t i=0; i<ADC_RX_BUF_SIZE; i++ )
     {
@@ -173,22 +166,19 @@ static void prvDSPPipeline()
         firfilt_crcf_execute( dsp.fr.filter, &(dsp.filtered_IQ[i]) ); 								// Compute output
     }
 
-
     /* Resample (decimate) */
     resamp_crcf_execute_block( dsp.rs.resampler, dsp.filtered_IQ, dsp.rs.input_length, dsp.resampled_IQ, &(dsp.rs.num_written) );  	// Execute resampler
 
 
     /* Time and frequency synchronization */
-    symsync_crcf_execute( dsp.ss.symsyncer, dsp.resampled_IQ, dsp.rs.output_length, dsp.synced_IQ, &(dsp.ss.num_written) );
-
+    symsync_crcf_execute( dsp.ss.symsyncer, dsp.resampled_IQ, dsp.rs.output_length, dsp.synced_IQ, &(dsp.ss.num_written) );			// Execute symsyncer
 
     /* Demodulation */
     uint32_t total_samples = dsp.dm.sampersym * dsp.rs.output_length;
     for ( uint32_t i; i<total_samples; i++ )
     {
-    	gmskdem_demodulate( dsp.dm.demod, dsp.synced_IQ, &(dsp.demodulated_data[i + AIS_MAX_PACKAGE_LENGTH*dsp.dm.sampersym]) );
+    	gmskdem_demodulate( dsp.dm.demod, dsp.synced_IQ, &(dsp.demodulated_data[i + AIS_MAX_PACKAGE_LENGTH*dsp.dm.sampersym]) );	// Execute demodulation
     }
-
 
     /* Frame detection: Look for preamble, start flag, and end flag. Determine payload length and destuff payload data. */
 	for ( uint32_t i=0; i<dsp.dm.output_length; i++ )
@@ -225,7 +215,6 @@ static void prvDSPPipeline()
 /* DSP Task responsible for the complete DSP pipeline */
 void prvDSPTask( void *pvParameters )
 {
-
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
 
@@ -246,7 +235,7 @@ void prvDSPTask( void *pvParameters )
 
 			/* Do DSP */
 			prvDSPPipeline();
-			dsp.batch_sn++;
+			dsp.batch_counter++;
 		}
 	}
 }

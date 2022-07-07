@@ -30,13 +30,13 @@ extern struct resultbuffer resultbuf;
 // Some static helper functions are found in buffer.c but not here.
 
 /************* Publicly callable functions *************/
-void buffer_init();
-void buffer_reset();
-int buffer_max_size();
-int buffer_length();
-int buffer_is_empty();
-void buffer_push_n(uint8_t data[], uint32_t n);
-int buffer_pop_n(uint8_t *buf, uint32_t n);
+void buffer_init();											// Initialize result buffer state
+void buffer_reset();										// Reset result buffer state
+uint32_t buffer_max_size();									// Return the maximum length of the result buffer
+uint32_t buffer_length();									// Return the length of data stored in the result buffer
+uint32_t buffer_is_empty();									// Check if result buffer is empty
+void buffer_push_n( uint8_t data[], uint32_t n );			// Push n bytes of data to the result buffer
+uint8_t buffer_pop_n( uint8_t *buf, uint32_t n  );				// Pop n bytes of data from the result buffer
 
 
 #endif /* INC_BUFFER_H_ */

@@ -23,7 +23,8 @@
 
 
 /* Struct for storing all decoding related options, variables and data. */
-typedef struct decoder {
+typedef struct decoder
+{
 
 	uint32_t last_sample;																// Store the last sample (i-1) value for comparison purposes
 	uint32_t lastlast_sample;															// Store the sample before the last sample (i-2) for comparison purposes
@@ -58,15 +59,15 @@ extern struct decoder dr;
 
 
 /************* Publicly callable functions *************/
-void prvDecoderInit();
-void prvDecoderReset();
-void prvDetectPreamble( unsigned int sample );
-void prvDetectStartFlag( unsigned int sample );
-void prvDetectEndFlag( unsigned int sample );
-void prvPayloadAndCRCDecode();
-void prvPayloadToBytes();
-void prvCRCToBytes();
-uint8_t prvCheckPayloadCRC();
+void prvDecoderInit();										// Initialize decoder state
+void prvDecoderReset();										// Reset decoder state
+void prvDetectPreamble( unsigned int sample );				// Look for AIS message preamble
+void prvDetectStartFlag( unsigned int sample );				// Look for AIS message start flag
+void prvDetectEndFlag( unsigned int sample );				// Look for AIS message end flag
+void prvPayloadAndCRCDecode();								// NRZI decode the payload and its CRC
+void prvPayloadToBytes();									// Bitshift the payload "bit array" to binary
+void prvCRCToBytes();										// Bitshift the CRC "bit array" to binary
+uint8_t prvCheckPayloadCRC();								// Compute the CRC-16 of the payload and compare it to the one obtained with the message
 
 
 #endif /* CORE_INC_DECODER_H_ */
