@@ -128,8 +128,9 @@ void PeriphCommonClock_Config(void);								// CubeMX did not generate this :(
 /* USER CODE BEGIN 0 */
 
 
-
-static void prvBlinkLED( void *pvParameters ) {
+/* Blinks LED */
+static void prvBlinkLED( void *pvParameters )
+{
 
 	/* Remove compiler warning about unused parameter. */
 	( void ) pvParameters;
@@ -140,18 +141,22 @@ static void prvBlinkLED( void *pvParameters ) {
 	}
 }
 
-void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
+
+/* FDCAN RX callback */
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+{
 
 	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData);
-	if(RxData[0] == 'X') {
-
+	if(RxData[0] == 'X')
+	{
 		//while(1);
 	}
 }
 
-//Initializes all needed peripherials
-//Currently only GPIO is need.
-static void pvrInitBoard() {
+
+/* Initializes all needed peripherials */
+static void pvrInitBoard()
+{
 
 	HAL_Init();
 	SystemClock_Config();
@@ -172,57 +177,51 @@ static void pvrInitBoard() {
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
 
+	/* Activate FDCAN notifications */
 	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
 
+	/* Start ADCs in Multimode DMA configuration */
+	if(HAL_ADCEx_MultiModeStart_DMA(ADCI, (uint32_t*)adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+		Error_Handler();
 
-	  // Calibrate ADCs for better accuracy and start it w/ interrupt
-	  /*if(HAL_ADCEx_Calibration_Start(ADCI, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
-	                Error_Handler();
-	  if(HAL_ADCEx_Calibration_Start(ADCQ, ADC_CALIB_OFFSET, ADC_DIFFERENTIAL_ENDED) != HAL_OK)
-	                Error_Handler();*/
-
-
-	  // Start ADCs in interrupt mode
-	  if(HAL_ADCEx_MultiModeStart_DMA(ADCI, (uint32_t*)adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
-	                Error_Handler();
-	  //if(HAL_ADCEx_MultiModeStart_DMA(ADCQ, (uint32_t*)adcQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
-	                //Error_Handler();
-
-	  // Start TIM2 in output compare mode
-	  if(HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)	// At least the timer starts and triggers interrupts. Interrupts probably are not needed in the end.
-	                Error_Handler();
-
-
+	/* Start TIM2 to produce interrupts for ADC conversion triggering */
+	if(HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)	// At least the timer starts and triggers interrupts. Interrupts probably are not needed in the end.
+		Error_Handler();
 
 }
 
-//A tick callback used to check SysTick functionality
-//If configUSE_TICK_HOOK in FreeRTOSConfig.h is set, 
-//the program should get stuck here.
-void vApplicationTickHook(void) {
+
+/* A tick callback used to check SysTick functionality
+ * If configUSE_TICK_HOOK in FreeRTOSConfig.h is set,
+ * the program should get stuck here. */
+void vApplicationTickHook(void)
+{
 	while(1);
 }
 
-void canTXTask(void* param) {
+
+/* CAN TX Task */
+void canTXTask(void* param)
+{
 	
 	for(;;) {
 
 		TxData[0] = 'X';
 		TxData[1] = 0xAD;
-		for(uint8_t i = 0; i < 8; i++) {
+		for(uint8_t i = 0; i < 8; i++)
+		{
 			/* Start the transmission process*/
 			TxData[2] = i;
-			if(HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK) {
+			if(HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK)
+			{
 				TxData[1] = i;
 				/*Transmission request Error*/
 				Error_Handler();
 			}
 			vTaskDelay(10);
 		}
-
 		vTaskDelay(1000);
 	}
-
 }
 
 /* USER CODE END 0 */
@@ -239,22 +238,16 @@ int main(void)
 
 	xTaskCreate( canTXTask, "CAN_TX", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
 
-	//Blinks the LED
+	/* Blinks the LED */
 	//xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
-	/************************************ FREE RTOS TEST END ************************************/
-	//Moves test data in between PC (python) & µC over RTT buffers
+	/* Moves test data in between PC (python) & µC over RTT buffers */
 	xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE * ((uint16_t)20), NULL, DSP_TEST_PRIORITY, NULL );
 
-
-
-	/************************************ FREE RTOS TEST END ************************************/
 	/* Task acquiring latest ADC data */
-//	xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
+	//xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
-//	xTaskCreate( prvDSPTask, "DSP", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL );
-
 	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );
 
 	/* Start the tasks and timer running. */
