@@ -191,15 +191,6 @@ static void pvrInitBoard()
 }
 
 
-/* A tick callback used to check SysTick functionality
- * If configUSE_TICK_HOOK in FreeRTOSConfig.h is set,
- * the program should get stuck here. */
-void vApplicationTickHook(void)
-{
-	while(1);
-}
-
-
 /* CAN TX Task */
 void canTXTask(void* param)
 {
@@ -243,9 +234,6 @@ int main(void)
 
 	/* Moves test data in between PC (python) & µC over RTT buffers */
 	xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE * ((uint16_t)20), NULL, DSP_TEST_PRIORITY, NULL );
-
-	/* Task acquiring latest ADC data */
-	//xTaskCreate( prvADCTask, "ADC", configMINIMAL_STACK_SIZE, NULL,  ADC_RX_PRIORITY, NULL);
 
 	/* Task taking care of digital signal processing */
 	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );

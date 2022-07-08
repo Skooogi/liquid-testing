@@ -65,6 +65,6 @@ size_t csp_buffer_size(void);
 */
 size_t csp_buffer_data_size(void);
 
-void csp_buffer_init(void);
+void csp_prvBufferInit(void);
 
 

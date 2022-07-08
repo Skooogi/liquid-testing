@@ -58,7 +58,7 @@ static uint16_t crc16_table [256] = {
 
 
 /* Instance of the decoder to extract and decode AIS messages from the stream of input data. */
-struct decoder dr = { };
+struct decoder dr;
 
 
 /* Initialize the decoder object */
@@ -111,7 +111,6 @@ void prvDetectPreamble(unsigned int sample)
 	else if ( (dr.last_sample == dr.lastlast_sample) && (sample != dr.last_sample) )	// If the two previous samples were equal, the current one should not be
 	{
 		dr.preamble_counter++;															// Found one more
-
 		if ( dr.preamble_counter < AIS_PREAMBLE_LENGTH )
 		{
 			dr.preamble_found = 0;														// Did not find complete preamble yet
@@ -120,6 +119,7 @@ void prvDetectPreamble(unsigned int sample)
 		{
 			dr.preamble_found = 1;														// Preamble found!
 			dr.preamble_counter = 0;													// Preamble counter reset
+			dr.decoding_in_progress = 1;												// Make sure to continue decoding this message instead of changing channel for next data
 		}
 
 	}
@@ -360,7 +360,15 @@ void prvPayloadToBytes()
 		{
 			if( dr.decoded_payload[j] == 1 ) byte |= 1 << (7-j);	// Bitshift to get the bits in their correct locations TODO: Verify this works correctly, especially for our 6 bit chars
 		}
-		dr.ascii_message[byte_idx] = byte + 48;						// Add 48 to a 6 bit char to make it the represent the corresponding 8 bit char TODO: Verify this is all that is needed for conversion.
+		/* Convert the 6 bit ASCII to 8 bit ASCII (source: http://ldsrc.blogspot.com/2017/09/0-understanding-ais-nmea-0183.html) TODO: Verify this works correctly */
+		if ( byte > 32 )
+		{
+			dr.ascii_message[byte_idx] = byte + 48 + 8;
+		}
+		else
+		{
+			dr.ascii_message[byte_idx] = byte + 48;
+		}
 		byte = 0;													// Reset byte for next one
 		byte_idx++;
 		dr.ascii_message_length++;									// Count how many bytes (chars) have been found
@@ -368,7 +376,10 @@ void prvPayloadToBytes()
 }
 
 
-/* Calculates the CRC-16 for given data of length len  */
+/* Calculates the CRC-16 for given data of length len
+ * TODO: THIS DOES NOT WORK!!! The CRC should be calculated for the 6 bit data but now its calculated for the 8 bit characters.
+ * How to compute the CRC of data that has a number of bits not divisible by 8?
+ * Take a look at this: https://stackoverflow.com/questions/3411654/best-way-to-generate-crc8-16-when-input-is-odd-number-of-bits-not-byte-c-or-p */
 static uint16_t prvCRC16( const uint8_t* data, uint32_t len )
 {
 	uint16_t crc = 0x0000;										// Init value for CRC-CCITT (See "CRC-16/KERMIT" at https://reveng.sourceforge.io/crc-catalogue/all.htm)

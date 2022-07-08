@@ -16,6 +16,8 @@
 #define FFT_SIZE 						ADC_RX_BUF_SIZE/2			// Number of samples for FFT
 #define SYMBOLRATE						9600.0f						// AIS data baudrate
 #define SAMPLES_PER_SYMBOL				ADC_SAMPLERATE/SYMBOLRATE	// How many samples per symbol for raw ADC data
+#define DECIMATION_RATIO				0.1f						// Only one out of 10 samples are not discarded in decimation (by the resampler)
+#define ANTIALIAS_CUTOFF				DECIMATION_RATIO*1			// The cutoff frequency of the antialiasing filter before resampling (0 <= fc <= 0.5 in normalized frequencies) TODO: Tweak (increase) value if cutoff should give more slack
 
 
 /* A struct to store FFT (fft) object options. */
@@ -47,35 +49,35 @@ struct filter
 struct resamp
 {
     resamp_crcf resampler;											// Resample object
-    uint32_t filter_delay;		    								// filter semi-length (filter delay)
-    float rate;               										// resampling rate (output/input)
-    float bw;              											// resampling filter bandwidth
-    float slsl;          											// resampling filter sidelobe suppression level
-    uint32_t npfb;       											// number of filters in bank (timing resolution)
-    uint32_t input_length; 											// number of input samples TODO: define beforehand so no need for malloc later
+    uint32_t filter_delay;		    								// Filter semi-length (filter delay)
+    float rate;               										// Resampling rate (output/input)
+    float fc;              											// Resampling filter cutoff frequency
+    float attenuation;          									// Resampling filter sidelobe suppression level
+    uint32_t npfb;       											// Number of filters in bank (timing resolution)
+    uint32_t input_length; 											// Number of input samples
     uint32_t output_length;											// Number of output samples
-    unsigned int num_written;   									// number of values written to buffer
+    unsigned int num_written;   									// Number of values written to buffer
 };
 
 /* A struct to store symbol synchronizer (symsync) object options . */
 struct symsync
 {
 	symsync_crcf symsyncer;											// Symsync object
-    uint32_t sampersym;    											// samples/symbol
-    uint32_t filter_delay;  	 									// filter delay (symbols)
-    float beta;  													// filter excess bandwidth factor
-    uint32_t npfb;    												// number of polyphase filters in bank
-    int32_t ftype; 													// filter type
-    unsigned int num_written;										// number of values written to buffer
+    uint32_t sampersym;    											// Samples/symbol
+    uint32_t filter_delay;  	 									// Filter delay (symbols)
+    float beta;  													// Filter excess bandwidth factor
+    uint32_t npfb;    												// Number of polyphase filters in bank
+    int32_t ftype; 													// Filter type
+    unsigned int num_written;										// Number of values written to buffer
 };
 
 /* A struct to store GMSK demodulator (gmskdem) object options . */
 struct demod
 {
     gmskdem demod;													// GMSK demodulator object
-    uint32_t sampersym;    											// filter samples/symbol
-    uint32_t filter_delay;    										// filter delay (symbols)
-    float BT;    													// bandwidth-time product
+    uint32_t sampersym;    											// Filter samples/symbol
+    uint32_t filter_delay;    										// Filter delay (symbols)
+    float BT;    													// Bandwidth-time product
     uint32_t output_length;											// Length of output array of 1s and 0s
 };
 
@@ -84,17 +86,16 @@ typedef struct dsp
 {
 
 	/* General variables */
-	uint8_t processing_request_flag;								// Set if there is data requiring processing
 	uint32_t batch_counter;											// Count how many times the DSP pipeline has been invoked
 	uint32_t message_counter;										// Counts number of successful decoded messages
-	float mix_freq;													// Mixing frequency determined by the FFT
+	float downmix_freq;												// Downmixing frequency determined by the FFT
 
 	/* Arrays to store intermediate results. */
-	complex float raw_IQ[ADC_RX_BUF_SIZE];
-	complex float filtered_IQ[ADC_RX_BUF_SIZE];
-	complex float *resampled_IQ;
-	complex float *synced_IQ;
-    unsigned int *demodulated_data;
+	complex float raw_IQ[ADC_RX_BUF_SIZE];							// Store the interleaved raw ADC data
+	complex float filtered_IQ[ADC_RX_BUF_SIZE];						// Store the data after anti-alias filtering
+	complex float *resampled_IQ;									// Store the resampler output data
+	complex float *synced_IQ;										// Store the symbol synchronizer output data
+    unsigned int *demodulated_data;									// Store the demodulator output data
 
     /* Structs for storing options of the liquid-dsp objects used. */
     struct fft fft;													// FFT object options

@@ -152,7 +152,7 @@ typedef struct csp_packet_s {
 	/**
 	 * Data part of packet.
 	 * When using the csp_buffer API, the size of the data part is set by
-	 * csp_buffer_init(), and can later be accessed by csp_buffer_data_size()
+	 * csp_prvBufferInit(), and can later be accessed by csp_buffer_data_size()
 	 */
 	union {
 		uint8_t data[CSP_BUFFER_SIZE];

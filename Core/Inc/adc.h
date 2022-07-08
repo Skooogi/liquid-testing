@@ -44,13 +44,11 @@ typedef struct tempadc
 extern struct tempadc adcT;
 
 
-
 /************* Publicly callable functions *************/
-void prvADCTask( void *pvParameters );							// Task acquiring latest ADC data
-void prvADCInit();												// Initialize the state of the ADC
-void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc);		// ADC conversion half complete callback
-void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc);			// ADC conversion complete callback
-
+void prvADCTask( void *pvParameters );									// Task acquiring latest ADC data
+void prvADCInit();														// Initialize the state of the ADC
+void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc);				// ADC conversion half complete callback
+void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc);					// ADC conversion complete callback
 
 
 #endif /* INC_ADC_H_ */
