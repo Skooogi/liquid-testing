@@ -48,6 +48,8 @@ typedef struct decoder
 
 	uint8_t ascii_message[AIS_MAX_PAYLOAD_BITS/AIS_BITS_PER_CHAR];						// Array for storing the final decode message (in 8 bit ASCII)
 	uint32_t ascii_message_length;														// Length of the ASCII message in bytes.
+	uint8_t dense_message[AIS_MAX_PAYLOAD_BITS % 8];									// Store the decoded payload densely with 1 and 1/3 6 bit characters per byte (for CRC computation)
+	uint32_t dense_message_length;														// Length of the dense message in bytes
 	uint16_t crc16;																		// Decoded CRC-16
 
 	uint8_t decoding_in_progress;														// Flag is set if promising decoding is in progress (e.g. preamble already found, don't change channels when set)

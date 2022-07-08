@@ -319,7 +319,7 @@ void prvPayloadAndCRCDecode()
 
 
 /* Take the CRC-16 array of 1s and 0s and convert it to actual binary bytes of data */
-void prvCRCToBytes()
+void prvCRC8Bit()
 {
 
 	/* Convert digitized CRC from array of "bits" to bytes */
@@ -341,8 +341,8 @@ void prvCRCToBytes()
 }
 
 
-/* Take the payload array of 1s and 0s and convert it to actual binary bytes of data */
-void prvPayloadToBytes()
+/* Take the payload array of 1s and 0s and convert it to 8 bit ASCII */
+void prvPayloadTo8Bit()
 {
 	/* Check that the number of payload bits is a multiple of 6 (AIS message consists of 6 bit chars) */
 	if ( !( dr.decoded_payload_length % 6) )
@@ -376,10 +376,44 @@ void prvPayloadToBytes()
 }
 
 
-/* Calculates the CRC-16 for given data of length len
- * TODO: THIS DOES NOT WORK!!! The CRC should be calculated for the 6 bit data but now its calculated for the 8 bit characters.
- * How to compute the CRC of data that has a number of bits not divisible by 8?
- * Take a look at this: https://stackoverflow.com/questions/3411654/best-way-to-generate-crc8-16-when-input-is-odd-number-of-bits-not-byte-c-or-p */
+/* Take the payload array of 1s and 0s and convert it so that it can be used to check for CRC */
+void prvPayloadTo6Bit()
+{
+	// TODO: This function needs to be checked for bugs and logical errors in the implementation. Didn't have too much time to think about it - your friendly neighborhood Ville
+	/* Check that the number of payload bits is a multiple of 6 (AIS message consists of 6 bit chars) */
+	if ( !( dr.decoded_payload_length % 6) )
+	{
+		Error_Handler();
+	}
+	dr.ascii_message_length = 0;
+	/* Convert digitized payload from array of "bits" to bytes */
+	uint8_t byte = 0;
+	uint32_t bit_idx = 0;												// Index of bit inside current byte
+	uint32_t byte_idx = 0;												// Index for completed bytes
+	for ( uint32_t i=0; i < dr.decoded_payload_length; i+=1 )
+	{
+		if ( bit_idx < 8 )
+		{
+			if( dr.decoded_payload[i] == 1 ) byte |= 1 << (7-bit_idx);	// Bitshift to get the bits in their correct locations TODO: Verify this works correctly, especially for our 6 bit chars
+			i++;
+		}
+		else
+		{
+			dr.dense_message[byte_idx] = byte;
+			bit_idx = 0;
+			byte = 0;
+			if( dr.decoded_payload[i] == 1 ) byte |= 1 << (7-bit_idx);	// Bitshift to get the bits in their correct locations TODO: Verify this works correctly, especially for our 6 bit chars
+		}
+		byte = 0;														// Reset byte for next one
+		dr.dense_message_length++;										// Count how many bytes (chars) have been found
+	}
+	/* Data must be padded to full contain and integer amount of bytes. Shift the last byte so that the (possible) padded zeros are the most significant bits.
+	 * This way they should not affect the result of calculating the CRC. Refer to: https://stackoverflow.com/questions/3411654/best-way-to-generate-crc8-16-when-input-is-odd-number-of-bits-not-byte-c-or-p */
+	dr.dense_message[dr.dense_message_length - 1] = dr.dense_message[dr.dense_message_length - 1] >> (dr.decoded_payload_length % 8);
+}
+
+
+/* Calculates the CRC-16 for given data of length len. TODO: Check that the this actually works and that the payload given to this is in the right format. */
 static uint16_t prvCRC16( const uint8_t* data, uint32_t len )
 {
 	uint16_t crc = 0x0000;										// Init value for CRC-CCITT (See "CRC-16/KERMIT" at https://reveng.sourceforge.io/crc-catalogue/all.htm)
@@ -395,7 +429,7 @@ static uint16_t prvCRC16( const uint8_t* data, uint32_t len )
 /* Check if the received CRC equals the one that is counted from the payload data. */
 uint8_t prvCheckPayloadCRC()
 {
-	return ( dr.crc16 == prvCRC16( dr.decoded_payload, dr.decoded_payload_length ) );
+	return ( dr.crc16 == prvCRC16( dr.dense_message, dr.dense_message_length ) );
 }
 
 
