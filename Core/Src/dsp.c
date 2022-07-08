@@ -197,8 +197,9 @@ static void prvDSPPipeline()
 		else if ( dsp.dr.endflag_found )													// If all three flags are found, decode the extracted payload
 		{
 			prvPayloadAndCRCDecode();														// Custom decoder for the payload and its CRC
-			prvPayloadToBytes();															// Bitshift the 1s and 0s in the payload array to bytes
-			prvCRCToBytes();																// Bitshift the 1s and 0s in the CRC-16 array to bytes
+			prvPayloadTo8Bit();																// Bitshift the 1s and 0s in the payload array to 8 bit ASCII
+			prvPayloadTo6Bit();																// Bitshift the 1s and 0s in the payload array to stuff the 6 bit chars into bytes without padding
+			prvExtractCRC();																// Bitshift the 1s and 0s in the CRC-16 array to bytes
 
 			if ( prvCheckPayloadCRC() )														// Check the CRC of the payload to make sure the payload has not been corrupted
 			{

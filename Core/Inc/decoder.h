@@ -40,7 +40,7 @@ typedef struct decoder
 	uint8_t endflag_found;																// Detected end flag
 
 	uint32_t encoded_payload_length;													// Length of the encoded payload (contains CRC-16)
-	uint32_t encoded_payload[AIS_MAX_ENCODED_PAYLOAD_LENGTH];							// Array to store the encoded payload and CRC for decoding
+	uint32_t encoded_payload[AIS_MAX_ENCODED_PAYLOAD_LENGTH + AIS_END_FLAG_LENGTH];		// Array to store the encoded payload and CRC for decoding (must have room for end flag as well)
 
 	uint8_t decoded_payload[AIS_MAX_PAYLOAD_BITS];										// Array for storing the encoded payload data (1s and 0s)
 	uint32_t decoded_payload_length;													// Length of the decoded payload;
@@ -67,8 +67,9 @@ void prvDetectPreamble( unsigned int sample );				// Look for AIS message preamb
 void prvDetectStartFlag( unsigned int sample );				// Look for AIS message start flag
 void prvDetectEndFlag( unsigned int sample );				// Look for AIS message end flag
 void prvPayloadAndCRCDecode();								// NRZI decode the payload and its CRC
-void prvPayloadToBytes();									// Bitshift the payload "bit array" to binary
-void prvCRCToBytes();										// Bitshift the CRC "bit array" to binary
+void prvPayloadTo8Bit();									// Convert the payload "bit array" to 8 bit ASCII
+void prvPayloadTo6Bit();									// Convert the payload "bit array" to consecutively packed 6 bit characters (1 and 1/3 chars/byte) for CRC calculation
+void prvExtractCRC();										// Convert the CRC "bit array" to a 16 bit CRC value
 uint8_t prvCheckPayloadCRC();								// Compute the CRC-16 of the payload and compare it to the one obtained with the message
 
 
