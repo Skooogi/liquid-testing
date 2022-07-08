@@ -17,8 +17,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
-#include "usb_device.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -27,13 +25,14 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
+
 #include "main.h"
 #include "adc.h"
 #include "dsp.h"
 #include "cubesat_protocol.h"
 #include "dsp_testing.h"
 #include "saved_signal.h"
-
 
 //FreeRTOS
 #include "FreeRTOS.h"
@@ -57,7 +56,7 @@
 #define DSP_TEST_PRIORITY	(tskIDLE_PRIORITY + 6)
 #define CSP_PRIORITY		(tskIDLE_PRIORITY + 10)
 
-#define DSP_STACK_SIZE		400;	// TODO: TBD
+#define DSP_STACK_SIZE		400	// TODO: TBD
 
 
 /* USER CODE END PTD */
@@ -181,12 +180,12 @@ static void pvrInitBoard()
 	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
 
 	/* Start ADCs in Multimode DMA configuration */
-	if(HAL_ADCEx_MultiModeStart_DMA(ADCI, adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
-		Error_Handler();
+	//if(HAL_ADCEx_MultiModeStart_DMA(ADCI, adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
+	//	Error_Handler();
 
 	/* Start TIM2 to produce interrupts for ADC conversion triggering */
-	if(HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)	// At least the timer starts and triggers interrupts. Interrupts probably are not needed in the end.
-		Error_Handler();
+	//if(HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)	// At least the timer starts and triggers interrupts. Interrupts probably are not needed in the end.
+	//	Error_Handler();
 
 }
 
@@ -215,6 +214,19 @@ void canTXTask(void* param)
 	}
 }
 
+//MEMORY MAPPING FOR FREERTOS
+HeapRegion_t xHeapRegions[] = {
+	//DTCMRAM	128 KB
+	{ (uint8_t*) 0x20000000, 128000 },
+	//RAM_D1	512 KB
+	{ (uint8_t*) 0x24000000, 512000 },
+	//RAM_D2	288 KB
+	{ (uint8_t*) 0x30000000, 288000 },
+	//RAM_D3	64 KB
+	{ (uint8_t*) 0x38000000, 64000 },
+	{NULL, 0}
+};
+
 /* USER CODE END 0 */
 
 /**
@@ -225,15 +237,17 @@ int main(void)
 {
   /* USER CODE BEGIN 1 */
 
+	//Nothing can be allocated before this has finished executing.
+	vPortDefineHeapRegions( xHeapRegions );
 	pvrInitBoard();
 
-	xTaskCreate( canTXTask, "CAN_TX", configMINIMAL_STACK_SIZE, NULL, TERMINAL_PRIORITY, NULL );
+	xTaskCreate( canTXTask, "CAN_TX", 34000, NULL, TERMINAL_PRIORITY, NULL );
 
 	/* Blinks the LED */
 	//xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
 	/* Moves test data in between PC (python) & µC over RTT buffers */
-	xTaskCreate( prvDSPTestingTask, "DSPtest", configMINIMAL_STACK_SIZE * ((uint16_t)20), NULL, DSP_TEST_PRIORITY, NULL );
+	xTaskCreate( prvDSPTestingTask, "DSPtest", 34000, NULL, DSP_TEST_PRIORITY, NULL );
 
 	/* Task taking care of digital signal processing */
 	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );
