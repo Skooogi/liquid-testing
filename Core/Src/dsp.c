@@ -3,6 +3,8 @@
  *
  * This file contains the digital signal processing functionality of the payload.
  *
+ * To Kasper and Topi: I'm sorry. Have a nice 5 weeks :D
+ *
  */
 
 
@@ -100,7 +102,7 @@ static void prvSubtractMean()
  * 2.	Remove DC offset			--------- Subtract the mean from the signal.
  * 3.	Detect peak frequency		--------- Detect whether data contains signal @ +25 kHz or -25 kHz.
  * 4.	Downmix						--------- +25 kHz or -25 kHz to 0 Hz.
- * 5.	Lowpass filter				--------- Use firfilt object (liquid-dsp) for antialiasing, i.e. remove out-of-band interference.
+ * 5.	Lowpass filter				--------- Use firfilt object (liquid-dsp) for anti-aliasing, i.e. remove out-of-band interference.
  * 6.	Decimation					--------- Use resamp object (liquid-dsp) to decimate excessive samples. Resamp does some filtering, but per docs: "For synchronization of digital receivers, it is always good practice to precede the resampler with an anti-aliasing filter to remove out-of-band interference."
  * 7. 	Matched filter				----,
  * 8. 	Coarse freq sync				|---- Use symsync object (liquid-dsp). It removes the frequency and timing (phase) offsets of the signal and decimates to one sample/symbol
@@ -116,9 +118,10 @@ static void prvDSPPipeline()
 	/* Interleave the I and Q signals to one single complex IQ array. */
 	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i++)
 	{
-		// ADC dualmode sampling stores both I and Q samples in same buffer as single 32 bit value (2*16 bits) so they have to be separated
-		int16_t I_value = adcIQ.data[i] & 0x00FF;					// TODO: Check that the correct bytes are taken (endianness etc.)
-		int16_t Q_value = (adcIQ.data[i] >> 16) & 0x00FF;			// TODO: Check that the correct bytes are taken (endianness etc.)
+		/* ADC dualmode sampling stores both I and Q samples in same buffer as single 32 bit value (2*16 bits) so they have to be separated */
+		// TODO: Check the endiannes correct bytes are taken
+		int16_t I_value = adcIQ.data[i] & 0x00FF;
+		int16_t Q_value = (adcIQ.data[i] >> 16) & 0x00FF;
 		dsp.raw_IQ[i] = I_value + Q_value*I;
 	}
 
@@ -159,7 +162,7 @@ static void prvDSPPipeline()
 		dsp.raw_IQ[i] = (complex float) (dsp.raw_IQ[i] * cexp(2*I*M_PI*dsp.downmix_freq*t));		// Downmix to 0 Hz by multiplying the time domain sample with a complex exponential (sine wave) that has the mix frequency.
 	}
 
-	/* Lowpass filter for antialiasing */
+	/* Lowpass filter for anti-aliasing */
     for ( uint32_t i=0; i<ADC_RX_BUF_SIZE; i++ )
     {
         firfilt_crcf_push( dsp.fr.filter, dsp.raw_IQ[i] );    										// Push filter input sample to the internal buffer of the filter
@@ -203,7 +206,7 @@ static void prvDSPPipeline()
 
 			if ( prvCheckPayloadCRC() )														// Check the CRC of the payload to make sure the payload has not been corrupted
 			{
-				prvBufferPushN( dsp.dr.ascii_message, dsp.dr.ascii_message_length );			// Push the message to the result buffer
+				prvBufferPushN( dsp.dr.ascii_message, dsp.dr.ascii_message_length );		// Push the message to the result buffer
 				dsp.message_counter++;														// Successful message counter goes brrrr
 				prvBufferPushN( &(resultbuf.eom), 1 );										// Push the end of message character to the result buffer to separate this message from the next ones
 			}

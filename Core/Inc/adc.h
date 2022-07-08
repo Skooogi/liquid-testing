@@ -36,7 +36,7 @@ extern struct rfadc adcIQ;
 typedef struct tempadc
 {
 
-	ALIGN_32BYTES (uint32_t temperature_buf[ADC_TEMPERATURE_BUF_SIZE]);	// TODO: Is the alignment necessary?
+	uint16_t temperature_buf[ADC_TEMPERATURE_BUF_SIZE];
 
 } *tempadc_t;
 

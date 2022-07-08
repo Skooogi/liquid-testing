@@ -1,7 +1,7 @@
 /*
  * adc.c
  *
- * This file contains functions controlling the ADC of the MCU.
+ * This file contains functions controlling the ADCs of the MCU.
  *
  */
 
@@ -19,9 +19,10 @@ struct rfadc adcIQ;
 struct tempadc adcT;
 
 
+/* Initialize ADCs */
 void prvADCInit(TIM_HandleTypeDef *htim)
 {
-	/* Initialize the arrays storing the states of the ADCs. */
+
 	memset( adcIQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint32_t) );
 	memset( adcIQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint32_t) );
 	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint32_t) );
@@ -43,6 +44,7 @@ void HAL_ADC_ConvHalfCpltCallback(ADC_HandleTypeDef *hadc)
 	//xTaskNotifyGive( DSPTaskHandle );						// Notify the DSP Task that there are data in need of processing
 
 }
+
 
 /* ADC conversion complete callback */
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc)

@@ -328,7 +328,7 @@ void prvPayloadTo8Bit()
 	{
 		for( j=i; j<(i+6); ++j )									// Characters in AIS payload are 6 bits long
 		{
-			if( dr.decoded_payload[j] == 1 ) byte |= 1 << (7-j);	// Bitshift to get the bits in their correct locations TODO: Verify this works correctly, especially for our 6 bit chars
+			if( dr.decoded_payload[j] == 1 ) byte |= 1 << (5-j);	// Bitshift to get the bits in their correct locations
 		}
 		/* Convert the 6 bit ASCII to 8 bit ASCII (source: http://ldsrc.blogspot.com/2017/09/0-understanding-ais-nmea-0183.html) TODO: Verify this works correctly */
 		if ( byte > 32 )
@@ -363,7 +363,7 @@ void prvPayloadTo6Bit()
 	{
 		if ( bit_idx < 8 )
 		{
-			if( dr.decoded_payload[i] == 1 ) byte |= 1 << (7-bit_idx);	// Bitshift to get the bits in their correct locations TODO: Verify this works correctly, especially for our 6 bit chars
+			if( dr.decoded_payload[i] == 1 ) byte |= 1 << (7-bit_idx);	// Bitshift to get the bits in their correct locations
 			i++;
 		}
 		else

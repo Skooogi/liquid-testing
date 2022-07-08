@@ -61,8 +61,8 @@ extern struct decoder dr;
 
 
 /************* Publicly callable functions *************/
-void prvDecoderInit();										// Initialize decoder state
-void prvDecoderReset();										// Reset decoder state
+void prvDecoderInit();
+void prvDecoderReset();
 void prvDetectPreamble( unsigned int sample );				// Look for AIS message preamble
 void prvDetectStartFlag( unsigned int sample );				// Look for AIS message start flag
 void prvDetectEndFlag( unsigned int sample );				// Look for AIS message end flag
