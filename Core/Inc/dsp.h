@@ -17,7 +17,7 @@
 #define SYMBOLRATE						9600.0f						// AIS data baudrate
 #define SAMPLES_PER_SYMBOL				ADC_SAMPLERATE/SYMBOLRATE	// How many samples per symbol for raw ADC data
 #define DECIMATION_RATIO				0.1f						// Only one out of 10 samples are not discarded in decimation (by the resampler)
-#define ANTIALIAS_CUTOFF				DECIMATION_RATIO*1			// The cutoff frequency of the antialiasing filter before resampling (0 <= fc <= 0.5 in normalized frequencies) TODO: Tweak (increase) value if cutoff should give more slack
+#define ANTIALIAS_CUTOFF				DECIMATION_RATIO*1			// The cutoff frequency of the anti-aliasing filter before resampling (0 <= fc <= 0.5 in normalized frequencies) TODO: Tweak (increase) value if cutoff should give more slack
 
 
 /* A struct to store FFT (fft) object options. */
