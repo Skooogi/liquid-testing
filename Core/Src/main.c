@@ -127,34 +127,8 @@ void PeriphCommonClock_Config(void);								// CubeMX did not generate this :(
 /* USER CODE BEGIN 0 */
 
 
-/* Blinks LED */
-static void prvBlinkLED( void *pvParameters )
-{
-
-	/* Remove compiler warning about unused parameter. */
-	( void ) pvParameters;
-	for( ;; )
-	{
-		pulseLED(500,250);
-
-	}
-}
-
-
-/* FDCAN RX callback */
-void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
-{
-
-	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData);
-	if(RxData[0] == 'X')
-	{
-		//while(1);
-	}
-}
-
-
 /* Initializes all needed peripherials */
-static void pvrInitBoard()
+static void prvInitBoard()
 {
 
 	HAL_Init();
@@ -171,13 +145,12 @@ static void pvrInitBoard()
 	MX_ADC2_Init();
 	MX_TIM1_Init();
 	MX_TIM2_Init();
+	/*
 	SEGGER_RTT_Init();
 	printf("\nConfiguring radio..\n");
 	configureRadio();
 	printf("Radio configured! \nPLL should be locked above^^\n\n");
-
-	/* Activate FDCAN notifications */
-	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
+	*/
 
 	/* Start ADCs in Multimode DMA configuration */
 	//if(HAL_ADCEx_MultiModeStart_DMA(ADCI, adcIQ.rx_buf, ADC_RX_BUF_SIZE) != HAL_OK)
@@ -186,14 +159,14 @@ static void pvrInitBoard()
 	/* Start TIM2 to produce interrupts for ADC conversion triggering */
 	//if(HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)	// At least the timer starts and triggers interrupts. Interrupts probably are not needed in the end.
 	//	Error_Handler();
-
 }
-
 
 /* CAN TX Task */
 void canTXTask(void* param)
 {
-	
+	pulseLED(300,10);
+	pulseLED(300,10);
+
 	for(;;) {
 
 		TxData[0] = 'X';
@@ -208,16 +181,27 @@ void canTXTask(void* param)
 				/*Transmission request Error*/
 				Error_Handler();
 			}
-			vTaskDelay(10);
+			pulseLED(30,30);
 		}
 		vTaskDelay(1000);
 	}
 }
 
+/* FDCAN RX callback */
+void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
+{
+
+	HAL_FDCAN_GetRxMessage(hfdcan, FDCAN_RX_FIFO0, &RxHeader, RxData);
+	if(RxData[0] == 'X')
+	{
+		//while(1);
+	}
+}
+
 //MEMORY MAPPING FOR FREERTOS
 HeapRegion_t xHeapRegions[] = {
-	//DTCMRAM	128 KB
-	{ (uint8_t*) 0x20000000, 128000 },
+	//DTCMRAM	108 KB // ~20 KB reserved for HAL
+	{ (uint8_t*) 0x20005000, 108000 },
 	//RAM_D1	512 KB
 	{ (uint8_t*) 0x24000000, 512000 },
 	//RAM_D2	288 KB
@@ -239,15 +223,15 @@ int main(void)
 
 	//Nothing can be allocated before this has finished executing.
 	vPortDefineHeapRegions( xHeapRegions );
-	pvrInitBoard();
+	prvInitBoard();
 
-	xTaskCreate( canTXTask, "CAN_TX", 34000, NULL, TERMINAL_PRIORITY, NULL );
+	xTaskCreate( canTXTask, "CAN_TX", 32000, NULL, TERMINAL_PRIORITY + 1, NULL );
 
 	/* Blinks the LED */
 	//xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
 
 	/* Moves test data in between PC (python) & µC over RTT buffers */
-	xTaskCreate( prvDSPTestingTask, "DSPtest", 34000, NULL, DSP_TEST_PRIORITY, NULL );
+	//xTaskCreate( prvDSPTestingTask, "DSPtest", 34000, NULL, DSP_TEST_PRIORITY, NULL );
 
 	/* Task taking care of digital signal processing */
 	//xTaskCreate( prvDSPTask, "DSP", DSP_STACK_SIZE,  DSP_PRIORITY, &DSPTaskHandle );
@@ -289,7 +273,6 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC3_Init();
   MX_ADC2_Init();
-  MX_USB_DEVICE_Init();
   MX_TIM2_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
@@ -590,7 +573,7 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE END FDCAN1_Init 1 */
   hfdcan1.Instance = FDCAN1;
   hfdcan1.Init.FrameFormat = FDCAN_FRAME_CLASSIC;
-  hfdcan1.Init.Mode = FDCAN_MODE_EXTERNAL_LOOPBACK;
+  hfdcan1.Init.Mode = FDCAN_MODE_INTERNAL_LOOPBACK;
   hfdcan1.Init.AutoRetransmission = DISABLE;
   hfdcan1.Init.TransmitPause = DISABLE;
   hfdcan1.Init.ProtocolException = DISABLE;
@@ -605,7 +588,7 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.MessageRAMOffset = 0;
   hfdcan1.Init.StdFiltersNbr = 0;
   hfdcan1.Init.ExtFiltersNbr = 0;
-  hfdcan1.Init.RxFifo0ElmtsNbr = 20;
+  hfdcan1.Init.RxFifo0ElmtsNbr = 64;
   hfdcan1.Init.RxFifo0ElmtSize = FDCAN_DATA_BYTES_8;
   hfdcan1.Init.RxFifo1ElmtsNbr = 0;
   hfdcan1.Init.RxFifo1ElmtSize = FDCAN_DATA_BYTES_8;
@@ -613,7 +596,7 @@ static void MX_FDCAN1_Init(void)
   hfdcan1.Init.RxBufferSize = FDCAN_DATA_BYTES_8;
   hfdcan1.Init.TxEventsNbr = 0;
   hfdcan1.Init.TxBuffersNbr = 0;
-  hfdcan1.Init.TxFifoQueueElmtsNbr = 1;
+  hfdcan1.Init.TxFifoQueueElmtsNbr = 16;
   hfdcan1.Init.TxFifoQueueMode = FDCAN_TX_FIFO_OPERATION;
   hfdcan1.Init.TxElmtSize = FDCAN_DATA_BYTES_8;
   if (HAL_FDCAN_Init(&hfdcan1) != HAL_OK)
@@ -629,6 +612,9 @@ static void MX_FDCAN1_Init(void)
 	{
 		Error_Handler();
 	}
+	/* Activate FDCAN notifications */
+	HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO0_NEW_MESSAGE, 0);
+
   /* USER CODE END FDCAN1_Init 2 */
 
 }
