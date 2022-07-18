@@ -18,20 +18,12 @@ void prvDSPTestingTask( void *pvParameters ) {
 	( void ) pvParameters;
 
 
-	int samples = 800;  	// How many samples are received and sent back. Size of alloc'd buffers in int16 s.
+	int samples = 500;  	// How many samples are received and sent back. Size of alloc'd buffers in int16 s.
 	int bytesPsamp = 2; 	// 2 bytes per data sample (int16_t)
-	int sleeptime = 3000;
+	int sleeptime = 2000;
 	printf("Begin DSP testing task \n");
 
-
-
-	/*
-	 * Allocate and configure RTT buffers.
-	 * Note: One additional int16_t is allocated to each buffer as
-	 * 		 sacrifice for the RTT reading which bungles up the last
-	 * 		 integer at the end of the buffer. This way intended sample
-	 * 		 size is preserved.
-	 */
+	//initRTTbuffers(samples, bytesPsamp, sleeptime);
 	int16_t allocArrayI[samples+1];								// Allocate memory for RTT buffer
 	int16_t allocArrayQ[samples+1];								// Allocate memory for RTT buffer
 	array2RTTbuffer(1, 1, allocArrayI, sizeof(allocArrayI));	// Configure RTT up-buffer '1'='DataOutI'
@@ -50,7 +42,7 @@ void prvDSPTestingTask( void *pvParameters ) {
 	// Allocate buffers for read data
 	int16_t readDataI[samples];
 	int16_t readDataQ[samples];
-	unsigned numBytesI, numBytesQ;
+	uint32_t numBytesI, numBytesQ, batch;
 
 
 	printf("Begin read, process, return data loop..\n");
@@ -60,7 +52,7 @@ void prvDSPTestingTask( void *pvParameters ) {
 		 * DATA IN part
 		 */
 		numBytesI = SEGGER_RTT_Read(1, &readDataI[0], sizeof(readDataI));
-		printf("Read %d bytes from down-buff 1 = 'I':\n", numBytesI);
+		printf("Read %d bytes from down-buff 1 = 'I':\n", (int)numBytesI);
 		numBytesQ = SEGGER_RTT_Read(2, &readDataQ[0], sizeof(readDataQ));
 
 		// CHANGE to just 'if (numBytes)' when comfortable and no prints are needed
@@ -71,7 +63,7 @@ void prvDSPTestingTask( void *pvParameters ) {
 				printf("%d ", readDataI[k]);
 			}
 			printf("... %d]\n", readDataI[numBytesI/bytesPsamp - 1]);
-			printf("Read %d bytes from down-buff 2 = 'Q':\n [", numBytesQ);
+			printf("Read %d bytes from down-buff 2 = 'Q':\n [", (int)numBytesQ);
 			for (int k = 0; k < 10; k++){
 				printf("%d ", readDataQ[k]);
 			}
@@ -93,10 +85,13 @@ void prvDSPTestingTask( void *pvParameters ) {
 			numBytesI = SEGGER_RTT_Write(1, &readDataI[0], numBytesI);	// Write I data to up-buffer '1' = I
 			numBytesQ = SEGGER_RTT_Write(2, &readDataQ[0], numBytesQ);	// Write Q data to up-buffer '2' = Q
 			if (numBytesI > 0) printf("Send I data back, ");
-			if (numBytesQ > 0) printf("Send Q data back; ");
+			if (numBytesQ > 0) printf("Send Q data back, ");
+			batch++;
+			printf("Batch num: %d; ", (int)batch);
 
 		}
 		else {
+			batch = 0;
 			printf("Nothing read; ");
 		}
 

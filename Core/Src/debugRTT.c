@@ -20,33 +20,21 @@ void writeRTT(char* p) {
 
 /*
  * Simplified input for configuring an RTT up-buffer for sending data out over RTT
- * for Python Script 'jlinker.py' to handle.
+ * for Python scripts to handle.
  */
 void array2RTTbuffer(int up_down_flag, int buff_num, int16_t *array, int16_t size) {
+
 	if(up_down_flag > 0){
-
-		//const char name[] = {'D','a','t','a','O','u','t', 48+buff_num,'\0'};
-
-		//const char numba = (char)48+buff_num;
-		//char name[9] = "DataOut";
-		//strncat(name, &numba, 1);
-		//const char *name_ptr = name;
-
-		//const char *name = "DataOut";
-
 		char *name = "DataOut";
 		if (buff_num == 1) {
 			name = "DataOutI";
 		} else if (buff_num == 2) {
 			name = "DataOutQ";
 		}
-
-
 		SEGGER_RTT_ConfigUpBuffer(buff_num, name, &array[0], size,
 								   SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
 	}
 	else{
-		//const char name[] = {'D','a','t','a','I','n', 48+buff_num, '\0'};
 		char *name = "DataIn";
 		if (buff_num == 1) {
 			name = "DataInI";
@@ -68,6 +56,37 @@ void array2RTTbuffer(int up_down_flag, int buff_num, int16_t *array, int16_t siz
 	int16_t testArr2[] = {11, 22, 400, 20000, 32767};	// Repeat with different data values
 	SEGGER_RTT_Write(1, &testArr2[0], sizeof(testArr2));
  	 */
+}
+
+
+
+	/*
+	 * Allocate and configure RTT buffers.
+	 * Note: One additional int16_t is allocated to each buffer as
+	 * 		 sacrifice for the RTT reading which bungles up the last
+	 * 		 integer at the end of the buffer. This way intended sample
+	 * 		 size is preserved.
+	 *
+	 * 	 int samples 			How many samples are received and sent back. Size of alloc'd buffers in int16 s.
+	 * 	 int bytesPsamp 		How many bytes per data sample (2 for int16_t)
+	 * 	 int sleeptime 			How many milliseconds should be waited in between data sample batches
+	 */
+void initRTTbuffers(int samples, int bytesPsamp, int sleeptime) {
+	int16_t allocArrayI[samples+1];								// Allocate memory for RTT buffer
+	int16_t allocArrayQ[samples+1];								// Allocate memory for RTT buffer
+	array2RTTbuffer(1, 1, allocArrayI, sizeof(allocArrayI));	// Configure RTT up-buffer '1'='DataOutI'
+	array2RTTbuffer(1, 2, allocArrayQ, sizeof(allocArrayQ));	// Configure RTT up-buffer '2'='DataOutQ
+	int16_t allocDownArrayI[samples+1];								// Allocate memory for RTT buffer
+	int16_t allocDownArrayQ[samples+1];								// Allocate memory for RTT buffer
+	array2RTTbuffer(-1, 1, allocDownArrayI, sizeof(allocDownArrayI));	// Configure RTT down-buffer '1'='DataInI'
+	array2RTTbuffer(-1, 2, allocDownArrayQ, sizeof(allocDownArrayQ));	// Configure RTT down-buffer '2'='DataInQ'
+
+	// Send communication specs over RTT to python scripts
+	int16_t allocArraySpecs[6];									// Allocate memory for RTT buffer
+	array2RTTbuffer(1, 3, allocArraySpecs, sizeof(allocArraySpecs));// Configure RTT up-buffer '3'='DataOut'
+	int16_t specs[6] = {samples, bytesPsamp, sleeptime, samples, bytesPsamp, sleeptime};
+	SEGGER_RTT_Write(3, &specs[0], sizeof(specs));
+
 }
 
 
