@@ -25,7 +25,7 @@ void prvADCInit(TIM_HandleTypeDef *htim)
 
 	memset( adcIQ.rx_buf, 0, ADC_RX_BUF_SIZE*sizeof(uint32_t) );
 	memset( adcIQ.data, 0, ADC_RX_BUF_SIZE*sizeof(uint32_t) );
-	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint32_t) );
+	memset( adcT.temperature_buf, 0, ADC_TEMPERATURE_BUF_SIZE*sizeof(uint16_t) );
 
 }
 

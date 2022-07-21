@@ -8,7 +8,7 @@
  */
 
 
-#include "stdlib.h"
+#include <stdlib.h>
 #include "dsp.h"
 #include "buffer.h"
 
@@ -113,7 +113,7 @@ static void prvSubtractMean()
  * 13.	Extract/decode packet		--------- Extract and destuff packet. Pack array of "bits" to actual binary (bytes).
  * 14. 	--> Output					--------- Push result to output buffer.
  */
-static void prvDSPPipeline()
+void prvDSPPipeline()
 {
 	/* Interleave the I and Q signals to one single complex IQ array. */
 	for(uint32_t i=0; i<ADC_RX_BUF_SIZE; i++)
@@ -177,7 +177,7 @@ static void prvDSPPipeline()
 
     /* Demodulation */
     uint32_t total_samples = dsp.dm.sampersym * dsp.rs.output_length;
-    for ( uint32_t i; i<total_samples; i++ )
+    for ( uint32_t i = 0; i<total_samples; i++ )
     {
     	gmskdem_demodulate( dsp.dm.demod, dsp.synced_IQ, &(dsp.demodulated_data[i + AIS_MAX_PACKAGE_LENGTH*dsp.dm.sampersym]) );	// Cannot perform as "block", only for a sample at a time
     }

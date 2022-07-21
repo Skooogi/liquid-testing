@@ -30,7 +30,6 @@
 #include "main.h"
 #include "adc.h"
 #include "dsp.h"
-#include "can_interface.h"
 #include "dsp_testing.h"
 #include "saved_signal.h"
 
@@ -45,6 +44,7 @@
 //User
 #include "receiver.h"
 #include "debugRTT.h"
+#include "can_interface.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -80,6 +80,12 @@ ADC_HandleTypeDef hadc2;
 ADC_HandleTypeDef hadc3;
 DMA_HandleTypeDef hdma_adc1;
 DMA_HandleTypeDef hdma_adc2;
+
+/*
+FDCAN_HandleTypeDef hfdcan1;
+FDCAN_RxHeaderTypeDef RxHeader; //FDCAN Bus Transmit Header
+FDCAN_TxHeaderTypeDef TxHeader; //FDCAN Bus Receive Header
+*/
 
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c4;
@@ -156,6 +162,8 @@ static void prvInitBoard()
 	//if(HAL_TIM_OC_Start_IT(&htim2, TIM_CHANNEL_1) != HAL_OK)	// At least the timer starts and triggers interrupts. Interrupts probably are not needed in the end.
 	//	Error_Handler();
 }
+
+
 //MEMORY MAPPING FOR FREERTOS
 HeapRegion_t xHeapRegions[] = {
 	//DTCMRAM	108 KB // ~20 KB reserved for HAL

@@ -32,7 +32,7 @@ void array2RTTbuffer(int up_down_flag, int buff_num, int16_t *array, int16_t siz
 			name = "DataOutQ";
 		}
 		SEGGER_RTT_ConfigUpBuffer(buff_num, name, &array[0], size,
-								   SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
+								   SEGGER_RTT_MODE_NO_BLOCK_TRIM);
 	}
 	else{
 		char *name = "DataIn";

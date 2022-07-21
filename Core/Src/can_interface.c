@@ -1,17 +1,61 @@
 #include "can_interface.h"
 
+#include <string.h>
+
 #include "FreeRTOS.h"
 #include "task.h"
 #include "semphr.h"
 #include "debugRTT.h"
 
-FDCAN_RxHeaderTypeDef RxHeader; //FDCAN Bus Transmit Header
-FDCAN_TxHeaderTypeDef TxHeader; //FDCAN Bus Receive Header
-FDCAN_HandleTypeDef hfdcan1;
 uint8_t RxData[8];
 uint8_t TxData[8];
 
+FDCAN_RxHeaderTypeDef RxHeader;
+FDCAN_TxHeaderTypeDef TxHeader;
+FDCAN_HandleTypeDef hfdcan1;
+
 static QueueHandle_t xQueue = NULL;
+
+typedef struct {
+
+	char telemetry[20];
+	uint8_t mode;
+
+	float bandwith;
+	float centre;
+	float cutoff;
+	float wSize;
+	float vco;
+
+	uint32_t cmx;
+	uint32_t registry;
+
+} state;
+
+state global = {0};
+
+static void sendMessage(char* data) {
+
+	size_t curr = 0;
+	do {
+		if(strlen(data) - curr > 8) {
+			memcpy(TxData, data + curr, 8*sizeof(uint8_t));
+		}
+		else {
+			memset(TxData, 0, 8);
+			memcpy(TxData, data + curr, (strlen(data)-curr));
+		}
+		curr += 8;
+
+		/* Start the transmission process*/
+		if(HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK) {
+			while(1);
+		}
+		pulseLED(30,30);
+
+	} while(curr < strlen(data));
+
+}
 
 /* CAN TX Task */
 void canTXTask(void* param) {
@@ -22,46 +66,54 @@ void canTXTask(void* param) {
 	pulseLED(300,10);
 	uint32_t command = 0;
 
+	global.telemetry[0] = 'T';
+	global.telemetry[1] = 'l';
+	global.telemetry[2] = 'm';
+	global.telemetry[3] = 'T';
+	global.telemetry[4] = 'r';
+
 	for(;;) {
 		xQueueReceive(xQueue, &command, portMAX_DELAY);
 
 		switch(command) {
+			case 0x0:
+				global.mode ? sendMessage("STATUS=1") : sendMessage("STATUS=0");
+				break;
 			case 0x1:
-				TxData[0] = '1';
+				for(int i = 0; i < 7; ++i) {
+					sendMessage("AISMSG\t");
+				}
+				sendMessage("\t\t");
 				break;
 			case 0x2:
-				TxData[0] = '2';
+				sendMessage("SET MODE");
+				xQueueReceive(xQueue, &command, portMAX_DELAY);
+				global.mode = RxData[0];
 				break;
 			case 0x3:
-				TxData[0] = '3';
+				sendMessage(global.telemetry);
 				break;
 			case 0x4:
-				TxData[0] = '4';
+				sendMessage("WRITE0x01");
 				break;
 			case 0x5:
-				TxData[0] = '5';
+				sendMessage("STM32REG");
 				break;
 			case 0x6:
-				TxData[0] = '6';
+				sendMessage("CMX994A");
 				break;
 			case 0x7:
-				TxData[0] = '7';
+				sendMessage("VCO_FREQ");
 				break;
 			default:
-				TxData[0] = ':';
-				TxData[1] = '(';
+				sendMessage("!COMMAND");
 				break;
 		}
-
-		/* Start the transmission process*/
-		if(HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData) != HAL_OK) {
-			while(1);
-		}
 		pulseLED(30,30);
+
 	}
 }
 
-/* FDCAN RX callback */
 void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs) {
 
 	if((RxFifo0ITs & FDCAN_IT_RX_FIFO0_NEW_MESSAGE) != RESET) {
@@ -80,4 +132,3 @@ void HAL_FDCAN_RxFifo0Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo0ITs)
 		}
 	}
 }
-
