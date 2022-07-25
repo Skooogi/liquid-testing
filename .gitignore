@@ -15,6 +15,7 @@ Python/.idea/**
 .settings
 .project
 .project.*
+can
 Kvarkensat Debug.launch
 Kvarkensat.launch
 .project
