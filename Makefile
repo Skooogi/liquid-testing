@@ -12,7 +12,7 @@ CFLAGS = $(C_DEFS) $(C_INCLUDES) -Wall -g -Wno-deprecated-declarations
 #Dependency information
 CFLAGS+= -MMD -MP -MF"$(@:%.o=%.d)"
 
-LIBS = -lc -lm -lliquid
+LIBS = -lliquid -lc -lm 
 LIBDIR = -Lthirdparty/liquid-dsp/
 LDFLAGS = $(LIBDIR) $(LIBS)
 
@@ -22,9 +22,9 @@ OBJECTS := $(patsubst $(SOURCE_DIR)/%.c, $(BUILD_DIR)/%.o, $(SOURCES))
 all: $(PROJECT).bin
 
 run: $(PROJECT).bin 
-	@(cd res; python generate.py)
+	@(cd res; python3 generate.py)
 	@./$<
-	@(cd res; python visualize.py processed.txt)
+	@(cd res; python3 visualize.py processed.txt)
 
 debug: $(PROJECT).bin 
 	@gdb ./$<

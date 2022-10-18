@@ -6,15 +6,14 @@ A test environment for testing liquid-dsp and GMSK signal generation. Setup..
 
 1. Install liquid-dsp
 
-Download repo form liquid-dsp github.
-When installing with their directions, use configure command:
+Go to folder thirdparty/liquid-dsp/
+Install with their directions, using our configure command:
 ````
+sudo apt-get install automake autoconf
 ./bootstrap.sh
 ./configure --enable-simdoverride --enable-fftoverride --enable-strict
 make
 ````
-
-Next create an additional folder 'thirdparty' and place the 'liquid-dsp' folder there. 
 Also remove 'libliquid.so' from 'liquid-dsp' folder.
 
 Liquid-dsp is now installed. 
