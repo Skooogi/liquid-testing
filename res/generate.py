@@ -27,10 +27,10 @@ for bit in testBits:
     nrzi = np.append(nrzi, state)
 testBits = nrzi
 levelArray = np.array([])
-for j in range(0, len(testBits)):
-    bitsInSym = np.ones(samPerSym) * (-1) * np.power(-1, testBits[j])
+for bit in testBits:
+    bitsInSym = np.ones(samPerSym) * (-1) * np.power(-1, bit)
     levelArray = np.append(levelArray, bitsInSym)
-levelArray = nrzi;
+
 levelArray = levelArray * deviation
 freqArray = fCarrier + levelArray
 smplArray = np.linspace(1, len(freqArray), len(freqArray))  # sampleArray / samplerate = time array

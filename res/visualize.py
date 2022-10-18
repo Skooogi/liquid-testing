@@ -62,14 +62,32 @@ for i in range(steps):
     
     if(end_step >= i and i >= start_step):
         plt.title("STEP " + str(int(metadata[1+4*i]) + 1))
-        plt.plot(freq, 10*np.log(y))
+        plt.plot(freq, 20*np.log10(y))
+        plt.xlabel("freq [Hz]")
+        plt.ylabel("fft [dB]")
         plt.grid(True)
-        plt.figure()
-        plt.title("STEP " + metadata[1+4*i])
-        plt.axhline(0,color="grey")
-        plt.axvline(0,color="grey")
-        plt.plot(x2.astype(float), y2.astype(float), "o", ms=2)
-        plt.grid(True)
+
+        #plt.figure()
+        _, axs = plt.subplots(3, 1)
+        # Plot IQ-constellation
+        axs[0].set_title("STEP " + metadata[1 + 4 * i])
+        axs[0].axhline(0, color="grey")
+        axs[0].axvline(0, color="grey")
+        axs[0].plot(x2.astype(float), y2.astype(float), "o", ms=2)
+        axs[0].grid(True)
+        # Plot I-series
+        sampleIdxs = np.arange(1, len(x2) + 1)  # gives indexes to read data
+        axs[1].plot(sampleIdxs, x2, 'b-', markersize=1)
+        axs[1].set_ylabel("I data back")
+        axs[1].legend('I', loc="upper right")
+        axs[1].set_title(f"Data from RTT, {len(x2)}+{len(y2)} samples")
+        axs[1].autoscale()
+        # Plot Q-series
+        sampleIdxs = np.arange(1, len(y2) + 1)  # gives indexes to read data
+        axs[2].plot(sampleIdxs, y2, 'r-', markersize=1)
+        axs[2].set_ylabel("Q data back")
+        axs[2].legend('Q', loc="upper right")
+
         if(i != steps-1 and i != end_step):
             plt.figure()
 plt.show()
