@@ -5,7 +5,7 @@
 #include <math.h>
 #include "liquid.h"
 
-#define SIGNAL_STEPS 5
+#define SIGNAL_STEPS 3
 
 int main() {
 	
@@ -30,8 +30,21 @@ int main() {
 	uint32_t signal_length = 0;
 	uint32_t current_step = 0;
 
-	fscanf(in, "%u", &signal_length);
+	char* line = malloc(12); 
+	char* temp;
+	fscanf(in, "%i\n%s\n",&signal_length, line);
+	printf("%s\n", line);
+	temp = strtok(line,",");
+	printf("%s\n", temp);
+	temp = strtok(NULL,",");
+	printf("%s\n", temp);
+	temp = strtok(NULL,",");
+	printf("%s\n", temp);
+	temp = strtok(NULL,",");
+	printf("%s\n", temp);
+	signal_length = atoi(temp);
 	complex float* samples = malloc(sizeof(complex float) * signal_length * SIGNAL_STEPS);
+	uint32_t metadata[SIGNAL_STEPS][2] = {0};
 
 	while ((fscanf(in, "%f,%f", &i, &q)) != 0 && j < signal_length) {
 		samples[j + signal_length * current_step] = i + q * I;
@@ -62,6 +75,8 @@ int main() {
 	for(int k = 0; k < signal_length; ++k) {
 		samples[k + signal_length * current_step] -= sum;
 	}
+	metadata[current_step][0] = sizeof(complex float);
+	metadata[current_step][1] = signal_length;
 	current_step++;
 
 	//2. Downmixing
@@ -72,6 +87,8 @@ int main() {
 			fdem, 
 			(complex float*) samples + signal_length * (current_step - 1), 
 			(complex float*) samples + signal_length * current_step, signal_length);
+	metadata[current_step][0] = sizeof(complex float);
+	metadata[current_step][1] = signal_length;
 	current_step++;
 
 	//3. Lowpass filter
@@ -88,8 +105,11 @@ int main() {
 		firfilt_crcf_execute(filter, &samples[k + signal_length * (current_step)] );
 		//printf("%f, %f\n", crealf(samples[k]), cimagf(samples[k]));
 	}
+	metadata[current_step][0] = sizeof(complex float);
+	metadata[current_step][1] = signal_length;
 	current_step++;
 
+	/*
 	//4. Decimation
 	float rate = 0.1f;	// Resampling rate (output/input). We want to decimate from 288 kHz to 28.8 kHz.
 	int output_length = ceilf(rate * signal_length);
@@ -101,6 +121,8 @@ int main() {
 			output_length, 
 			samples + signal_length * current_step, 
 			&(num_written));
+	metadata[current_step][0] = sizeof(complex float);
+	metadata[current_step][1] = num_written;
 	current_step++;
 
 	//5. Symsync
@@ -117,8 +139,10 @@ int main() {
 			num_written, 
 			samples + signal_length * current_step, 
 			&(num_written));
+	metadata[current_step][0] = sizeof(complex float);
+	metadata[current_step][1] = num_written;
 	current_step++;
-
+*/
 	//6. Demodulation
 	/*
 	output_length = ceil(output_length/(float)3) + 52;	// The output length is
@@ -131,18 +155,33 @@ int main() {
     	}*/
 
 	//FILE IO
-	fprintf(out, "%i,%i\n", SIGNAL_STEPS, signal_length);
-	for(int step = 0; step < 1; ++step) {
+	fprintf(out, "%i\n", SIGNAL_STEPS);
+	int offset = 0;
+	for(int step = 0; step < SIGNAL_STEPS; ++step) {
 		
-		for(int k = 0; k < signal_length; ++k) {
-			if(step < 3) {
-				fprintf(out, "%f,%f\n", crealf(samples[k + signal_length * step]), cimagf(samples[k + signal_length * step]));
+		fprintf(out, "STEP,%i,%i,%i\n", step, metadata[step][0], metadata[step][1]);
+		printf("Writing STEP %i %i %i\n", step, metadata[step][0], metadata[step][1]);
+		for(int k = 0; k < metadata[step][1]; ++k) {
+			switch(metadata[step][0]) {
+				case 8:
+					fprintf(
+						out, 
+						"%f,%f\n", 
+						crealf(samples[k + offset]), 
+						cimagf(samples[k + offset]));
+					break;
+				case 4:
+					fprintf(
+						out,
+						"%i,%i\n",
+						(uint32_t) samples[k + offset],
+						(uint32_t) samples[k + offset]);
+					break;
+				default:
+					break;
 			}
-			//fprintf(out, "%i,%i\n", demod_samples[k], demod_samples[k]);
-	//		printf("%i", demod_samples[k]);
-	//		if((k+1) % 8 == 0 && k != 0)
-		//		printf("\n");
 		}
+		offset += metadata[step][1];
 	}
 
 	fclose(in);

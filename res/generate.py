@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.ndimage import gaussian_filter
     
 N = 20000                               #Number of samples
@@ -6,35 +7,41 @@ samplerate = 288e3                      #ADC samplerate (currently 288k)
 bitrate = 9600                          #RTT transfer rate
 samPerSym = int(samplerate / bitrate)        #Samples per symbol (Needs to match liquid)
 fCarrier = 25e3                         #Carrier frequency
-bytes=[0xAA, 0xAA, 0xAA, 0xAA]          #Actual message bytes
+#bytes=[0xFF, 0x12, 0xA3, 0x4F]          #Actual message bytes
 magnitude = 10
 dcOffset = 200
 deviation = 4.8e3
 sigma = 0
+message = np.array([0x47,0x4d,0x53,0x4b,0x44,0x4d,0x4f,0x44]) #GMSKDMOD
 
-testData = np.array(bytes, dtype=np.uint8)
-testData = np.append(testData, testData)
-testData = np.append(testData, testData)
-testData = np.append(testData, testData)
+data = np.array(message, dtype=np.uint8)
+data = np.append(data, data)
+data = np.append(data, data)
+data = np.append(data, data)
 
-testBits = np.unpackbits(testData)
-
+testBits = np.unpackbits(data)
+nrzi = np.array([])
+state = testBits[0]
+for bit in testBits:
+    state ^= bit ^ 1
+    nrzi = np.append(nrzi, state)
+testBits = nrzi
 levelArray = np.array([])
-for i in range(0, len(testBits)):
-    bitsInSym = np.ones(samPerSym) * (-1) * np.power(-1, testBits[i])
+for j in range(0, len(testBits)):
+    bitsInSym = np.ones(samPerSym) * (-1) * np.power(-1, testBits[j])
     levelArray = np.append(levelArray, bitsInSym)
-
+levelArray = nrzi;
 levelArray = levelArray * deviation
-levelArray = gaussian_filter(levelArray, sigma=0.0)
 freqArray = fCarrier + levelArray
-smplArray = np.linspace(1,len(freqArray), len(freqArray))
+smplArray = np.linspace(1, len(freqArray), len(freqArray))  # sampleArray / samplerate = time array
 wave = magnitude * np.exp(1j * 2 * np.pi * freqArray * smplArray / samplerate)
-
 waveI = np.zeros(len(wave))
 waveQ = np.zeros(len(wave))
 
 with open("signal.txt", "w") as file:
-    file.write(str(len(wave)))
+    file.write(str(1));
+    file.write('\n')
+    file.write("STEP,0,8,"+str(len(wave)))
     file.write('\n')
     for i in range(0, len(wave)):
         waveI[i] = wave[i].real + dcOffset
