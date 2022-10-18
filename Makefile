@@ -30,6 +30,7 @@ debug: $(PROJECT).bin
 	@gdb ./$<
 
 $(PROJECT).bin: $(OBJECTS) 
+	@rm -f ./thirdparty/liquid-dsp/*.so
 	@$(CC) $^ $(LDFLAGS) -o $@
 	$(info [GENERATING] $@)
 
