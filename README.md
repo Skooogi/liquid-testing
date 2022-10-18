@@ -7,7 +7,7 @@ A test environment for testing liquid-dsp and GMSK signal generation. Setup..
 1. Clone this repo recursively
 ````
 git clone --recursive https://github.com/Skooogi/liquid-testing.git
-
+````
 
 
 2. Building liquid-dsp for your system
