@@ -191,7 +191,7 @@ int main(void)
 	vPortDefineHeapRegions( xHeapRegions );
 	prvInitBoard();
 
-	xTaskCreate( canTXTask, "CAN_TX", 32000, NULL, TERMINAL_PRIORITY + 1, NULL );
+	xTaskCreate( canTXTask, "CAN_TX", 4096, NULL, TERMINAL_PRIORITY + 1, NULL );
 
 	/* Blinks the LED */
 	//xTaskCreate( prvBlinkLED, "LED", configMINIMAL_STACK_SIZE, NULL, BLINK_PRIORITY, NULL );
