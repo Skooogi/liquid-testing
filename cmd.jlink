@@ -1,0 +1,9 @@
+device STM32H743ZI
+SI JTAG
+Speed 4000
+connect STM32H743ZI 
+loadbin build/Kvarkensat.bin,0x08000000
+h
+r
+exit
+
