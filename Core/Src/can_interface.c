@@ -117,10 +117,10 @@ void setParam(short param, uint32_t val) {
 			break;
 		case 0x4:
 			global.vco = swapped;
+			break;
 		default:
 			sendMessage("!PARAM");
 			return;
-			break;
 	}
 	sendMessage("PARAMSET");
 }
@@ -145,56 +145,174 @@ void getTelemetry() {
 	sendMessage("VCO");
 	memcpy(bytes, &global.vco, sizeof(float));
 	sendData(bytes, 4);
-	/*
-	sendMessage("CMX");
-	memcpy(bytes, &global.cmx, sizeof(uint32_t));
-	sendData(bytes, 4);
-	sendMessage("REGISTRY");
-	memcpy(bytes, &global.registry, sizeof(uint32_t));
-	sendData(bytes, 4);*/
 	sendMessage("\t\t");
 }
 
-void getSTM32Registry(short reg, uint32_t val) {
-	if(reg < 0 || reg > 99) {
+void setSTM32Registry(short bus, short reg, short val) {
+	if(reg > 15 || bus > 3) {
+		sendMessage("NO_REG");
+		return;
+	}
+	GPIO_TypeDef* pin_type;
+	switch(bus) {
+		case 0:
+		       	pin_type = GPIOA;
+			break;
+		case 1:
+			pin_type = GPIOB;
+			break;
+		case 2:
+			pin_type = GPIOC;
+			break;
+		case 3: 
+			pin_type = GPIOD;
+			break;
+	}
+
+	short pin;
+	switch(reg) {
+		case 0:
+			pin = GPIO_PIN_0;
+			break;
+		case 1:
+			pin = GPIO_PIN_0;
+			break;
+		case 2:
+			pin = GPIO_PIN_2;
+			break;
+		case 3:
+			pin = GPIO_PIN_3;
+			break;
+		case 4:
+			pin = GPIO_PIN_4;
+			break;
+		case 5:
+			pin = GPIO_PIN_5;
+			break;
+		case 6:
+			pin = GPIO_PIN_6;
+			break;
+		case 7:
+			pin = GPIO_PIN_7;
+			break;
+		case 8:
+			pin = GPIO_PIN_8;
+			break;
+		case 9:
+			pin = GPIO_PIN_9;
+			break;
+		case 10:
+			pin = GPIO_PIN_10;
+			break;
+		case 11:
+			pin = GPIO_PIN_11;
+			break;
+		case 12:
+			pin = GPIO_PIN_12;
+			break;
+		case 13:
+			pin = GPIO_PIN_13;
+			break;
+		case 14:
+			pin = GPIO_PIN_14;
+			break;
+		case 15:
+			pin = GPIO_PIN_15;
+			break;
+	}
+
+	if(val) {
+		HAL_GPIO_WritePin(pin_type, pin, 1L);
+		sendMessage("REGSET1");
+		return;
+	}
+
+	else {
+		HAL_GPIO_WritePin(pin_type, pin, 0l);
+		sendMessage("REGSET0");
+		return;
+	}
+}
+
+void getSTM32Registry(short bus, uint32_t reg) {
+	if(reg > 15 || bus > 3) {
 		sendMessage("NO_REG");
 		return;
 	}
 
+	GPIO_TypeDef* pin_type;
+	switch(bus) {
+		case 0:
+		       	pin_type = GPIOA;
+			break;
+		case 1:
+			pin_type = GPIOB;
+			break;
+		case 2:
+			pin_type = GPIOC;
+			break;
+		case 3: 
+			pin_type = GPIOD;
+			break;
+	}
+
+	short pin;
+	switch(reg) {
+		case 0:
+			pin = GPIO_PIN_0;
+			break;
+		case 1:
+			pin = GPIO_PIN_0;
+			break;
+		case 2:
+			pin = GPIO_PIN_2;
+			break;
+		case 3:
+			pin = GPIO_PIN_3;
+			break;
+		case 4:
+			pin = GPIO_PIN_4;
+			break;
+		case 5:
+			pin = GPIO_PIN_5;
+			break;
+		case 6:
+			pin = GPIO_PIN_6;
+			break;
+		case 7:
+			pin = GPIO_PIN_7;
+			break;
+		case 8:
+			pin = GPIO_PIN_8;
+			break;
+		case 9:
+			pin = GPIO_PIN_9;
+			break;
+		case 10:
+			pin = GPIO_PIN_10;
+			break;
+		case 11:
+			pin = GPIO_PIN_11;
+			break;
+		case 12:
+			pin = GPIO_PIN_12;
+			break;
+		case 13:
+			pin = GPIO_PIN_13;
+			break;
+		case 14:
+			pin = GPIO_PIN_14;
+			break;
+		case 15:
+			pin = GPIO_PIN_15;
+			break;
+	}
 	unsigned char data[2] = {0};
-	if(global.registry[reg]) {
+	GPIO_PinState state = HAL_GPIO_ReadPin(pin_type, pin);
+	if(state == GPIO_PIN_SET) {
 		data[0] = 1;
 	}
 	sendData(data, 1);
-}
-
-void setSTM32Registry(short reg, uint32_t val) {
-	if(reg < 0 || reg > 99) {
-		sendMessage("NO_REG");
-		return;
-	}
-
-	global.registry[reg] = val ? 1 : 0;
-	sendMessage("REG_SET");
-}
-
-void setCMXRegistry(short reg, uint32_t val) {
-	if(reg < 0 || reg > 99) {
-		sendMessage("NO_REG");
-		return;
-	}
-
-	global.cmx[reg] = val ? 1 : 0;
-	sendMessage("REG_SET");
-}
-
-void getCMXRegistry(short reg, uint32_t val) {
-	if(reg < 0 || reg > 99) {
-		sendMessage("NO_REG");
-		return;
-	}
-
-	global.cmx[reg] ? sendData((unsigned char*) 0x1, 1) : sendData((unsigned char*) 0x0, 1);
 }
 
 /* CAN TX Task */
@@ -212,8 +330,8 @@ void canTXTask(void* param) {
 	global.wSize = 4.0f;
 	global.vco = 5.0f;
 	for(int i = 0; i < 100; ++i) {
-		global.registry[i] = i;
-		global.cmx[i] = i;
+		global.registry[i] = 1;
+		global.cmx[i] = 1;
 	}
 
 	for(;;) {
@@ -233,28 +351,18 @@ void canTXTask(void* param) {
 				setParam((short)(command >> 32),(uint32_t) command);
 				break;
 			case 0x4:
-				setParam(4,(uint32_t) command);
-				break;
-			case 0x5:
 				getTelemetry();
 				break;
+			case 0x5:
+				setSTM32Registry((short)(command >> 32), (short)(command >> 16), (short)command);
+				break;
 			case 0x6:
-				getSTM32Registry((short)(command >> 32),(uint32_t)command);
-				break;
-			case 0x7:
-				setSTM32Registry((short)(command >> 32),(uint32_t)command);
-				break;
-			case 0x8:
-				setCMXRegistry((short)(command >> 32),(uint32_t)command);
-				break;
-			case 0x9:
-				getCMXRegistry((short)(command >> 32),(uint32_t)command);
+				getSTM32Registry((short)(command >> 32), (short)(command >> 16));
 				break;
 			default:
 				sendMessage("!COMMAND");
 				break;
 		}
-		pulseLED(30,30);
 	}
 }
 

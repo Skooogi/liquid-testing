@@ -8,6 +8,8 @@
 #ifndef INC_RECEIVER_H_
 #define INC_RECEIVER_H_
 
+#include <stdint.h>
+
 
 /* Receiver register map */
 #define CMX994A_GR			0x10
